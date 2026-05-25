@@ -21,7 +21,13 @@ export const getAllProducts = asyncHandler(async (req, res) => {
         limit = 12,
     } = req.query;
 
-    const filter = { isActive: true };
+    const filter = { 
+        isActive: true,
+        $or: [
+            { scheduledUploadTime: null },
+            { scheduledUploadTime: { $lte: new Date() } }
+        ]
+    };
 
     if (country === 'Worldwide') {
         if (regionCountry && regionCountry !== 'All Countries') {
@@ -216,9 +222,24 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
         store,
         category,
         subCategory,
+        status,
     } = req.query;
 
     const filter = {};
+
+    if (status) {
+        if (status === 'active') {
+            filter.isActive = true;
+            filter.$or = [
+                { scheduledUploadTime: null },
+                { scheduledUploadTime: { $lte: new Date() } }
+            ];
+        } else if (status === 'inactive') {
+            filter.isActive = false;
+        } else if (status === 'scheduled') {
+            filter.scheduledUploadTime = { $gt: new Date() };
+        }
+    }
 
     if (country && country !== 'All Countries' && country !== 'ALL') {
         if (country === 'Worldwide') {
@@ -286,7 +307,7 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const createProduct = asyncHandler(async (req, res) => {
-    const { title, description, images, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries } =
+    const { title, description, images, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, scheduledUploadTime, isActive } =
         req.body;
 
 
@@ -310,6 +331,8 @@ export const createProduct = asyncHandler(async (req, res) => {
         category,
         subCategory: subCategory || '',
         countries: Array.isArray(countries) ? countries : [countries],
+        scheduledUploadTime: scheduledUploadTime || null,
+        isActive: isActive !== undefined ? isActive : true,
         createdBy: req.user.id,
     });
 
@@ -328,7 +351,7 @@ export const createProduct = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const updateProduct = asyncHandler(async (req, res) => {
-    const { title, description, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, inStock, images } =
+    const { title, description, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, inStock, images, scheduledUploadTime, isActive } =
         req.body;
 
 
@@ -357,6 +380,8 @@ export const updateProduct = asyncHandler(async (req, res) => {
     if (countries) product.countries = Array.isArray(countries) ? countries : [countries];
     if (inStock !== undefined) product.inStock = inStock;
     if (images) product.images = images;
+    if (scheduledUploadTime !== undefined) product.scheduledUploadTime = scheduledUploadTime;
+    if (isActive !== undefined) product.isActive = isActive;
 
     await product.save();
 

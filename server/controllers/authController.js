@@ -13,6 +13,8 @@ const generateToken = (userId) => {
     });
 };
 
+const normalizeEmail = (email) => email?.trim().toLowerCase();
+
 /**
  * Register user (Admin)
  * @route POST /api/auth/register
@@ -20,9 +22,10 @@ const generateToken = (userId) => {
  */
 export const registerUser = asyncHandler(async (req, res) => {
     const { username, email, password, confirmPassword } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     // Validation
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !normalizedEmail || !password || !confirmPassword) {
         throw new AppError('All fields are required', 400);
     }
 
@@ -32,7 +35,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
     // Check if user already exists
     const existingUser = await User.findOne({
-        $or: [{ email }, { username }],
+        $or: [{ email: normalizedEmail }, { username }],
     });
 
     if (existingUser) {
@@ -42,7 +45,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     // Create new user
     const newUser = new User({
         username,
-        email,
+        email: normalizedEmail,
         password,
         role: 'admin', // Registration creates admin users
     });
@@ -73,14 +76,15 @@ export const registerUser = asyncHandler(async (req, res) => {
  */
 export const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     // Validation
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
         throw new AppError('Email and password are required', 400);
     }
 
     // Find user and get password (normally excluded from queries)
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) {
         throw new AppError('Invalid email or password', 401);
@@ -168,6 +172,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
  */
 export const updateUserProfile = asyncHandler(async (req, res) => {
     const { username, email } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     const user = await User.findById(req.user.id);
 
@@ -183,12 +188,12 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         user.username = username;
     }
 
-    if (email) {
-        const existingEmail = await User.findOne({ email, _id: { $ne: user._id } });
+    if (normalizedEmail) {
+        const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
         if (existingEmail) {
             throw new AppError('Email already in use', 409);
         }
-        user.email = email;
+        user.email = normalizedEmail;
     }
 
     await user.save();

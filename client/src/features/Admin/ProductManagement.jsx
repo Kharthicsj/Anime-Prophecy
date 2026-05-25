@@ -25,6 +25,8 @@ const ProductManagement = () => {
 	const [filterAnime, setFilterAnime] = useState("All");
 	const [filterStore, setFilterStore] = useState("All");
 	const [filterCountry, setFilterCountry] = useState("All");
+	const [filterStatus, setFilterStatus] = useState("All");
+	const [showScheduledModal, setShowScheduledModal] = useState(false);
 
 	const initialForm = {
 		title: "",
@@ -39,6 +41,8 @@ const ProductManagement = () => {
 		countries: ["US"],
 		colors: [],
 		sizes: [],
+		isActive: true,
+		scheduledUploadTime: "",
 	};
 	const [formData, setFormData] = useState(initialForm);
 	const [imageItems, setImageItems] = useState([]);
@@ -263,6 +267,8 @@ const ProductManagement = () => {
 			countries: prod.countries || [],
 			colors: prod.colors || [],
 			sizes: prod.sizes || [],
+			isActive: prod.isActive !== undefined ? prod.isActive : true,
+			scheduledUploadTime: prod.scheduledUploadTime ? new Date(prod.scheduledUploadTime).toISOString().slice(0, 16) : "",
 		});
 		if (!animeOptions.includes(prod.animeTag)) {
 			setFormData((p) => ({ ...p, animeTag: "Other" }));
@@ -449,6 +455,8 @@ const ProductManagement = () => {
 					publicId,
 					isMain,
 				})),
+				isActive: formData.isActive,
+				scheduledUploadTime: formData.scheduledUploadTime || null,
 			};
 
 			if (editingId) {
@@ -601,12 +609,21 @@ const ProductManagement = () => {
 										Manage {products.length} products
 									</p>
 								</div>
-								<Button
-									onClick={openCreate}
-									className="bg-purple-600 hover:bg-purple-700"
-								>
-									+ Add Product
-								</Button>
+								<div className="flex gap-2">
+									<Button
+										onClick={() => setShowScheduledModal(true)}
+										variant="secondary"
+										className="border border-purple-500/30 hover:border-purple-500"
+									>
+										Manage Scheduled
+									</Button>
+									<Button
+										onClick={openCreate}
+										className="bg-purple-600 hover:bg-purple-700"
+									>
+										+ Add Product
+									</Button>
+								</div>
 							</div>
 
 							{/* ── Search Bar ── */}
@@ -674,10 +691,20 @@ const ProductManagement = () => {
 										{countryOptions.map((o) => <option key={o} value={o}>{o}</option>)}
 									</select>
 								</div>
+								{/* Status */}
+								<div>
+									<label className="block text-xs text-zinc-500 mb-1">Status</label>
+									<select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
+										<option value="All">All Statuses</option>
+										<option value="Active">Active</option>
+										<option value="Inactive">Inactive (Private)</option>
+										<option value="Scheduled">Scheduled</option>
+									</select>
+								</div>
 							</div>
 
 							{/* Active filter chips */}
-							{(searchQuery || filterCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All") && (
+							{(searchQuery || filterCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All") && (
 								<div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-zinc-800">
 									<span className="text-xs text-zinc-500">Active filters:</span>
 									{searchQuery && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">Search: "{searchQuery}"</span>}
@@ -685,7 +712,8 @@ const ProductManagement = () => {
 									{filterAnime !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterAnime}</span>}
 									{filterStore !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterStore}</span>}
 									{filterCountry !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterCountry}</span>}
-									<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); }} className="text-xs text-zinc-500 hover:text-red-400 transition-colors underline">Clear all</button>
+									{filterStatus !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterStatus}</span>}
+									<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-xs text-zinc-500 hover:text-red-400 transition-colors underline">Clear all</button>
 								</div>
 							)}
 						</div>
@@ -705,6 +733,17 @@ const ProductManagement = () => {
 							if (filterAnime !== "All" && p.animeTag !== filterAnime) return false;
 							if (filterStore !== "All" && p.store !== filterStore) return false;
 							if (filterCountry !== "All" && !(p.countries || []).includes(filterCountry)) return false;
+							
+							if (filterStatus === "Active") {
+								if (!p.isActive || (p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date())) return false;
+							}
+							if (filterStatus === "Inactive") {
+								if (p.isActive) return false;
+							}
+							if (filterStatus === "Scheduled") {
+								if (!p.scheduledUploadTime || new Date(p.scheduledUploadTime) <= new Date()) return false;
+							}
+
 							return true;
 						});
 						// Sort
@@ -815,13 +854,25 @@ const ProductManagement = () => {
 												<span className="text-purple-400 font-bold">
 													{p.currency} {p.price}
 												</span>
-												<span
-													className={`text-xs px-2 py-1 rounded ${p.inStock ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
-												>
-													{p.inStock
-														? "In Stock"
-														: "Out of Stock"}
-												</span>
+												<div className="flex gap-2 items-center">
+													{(!p.isActive) && (
+														<span className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-400 border border-zinc-700" title="Private Mode">
+															Private
+														</span>
+													)}
+													{(p.isActive && p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date()) && (
+														<span className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-400 border border-blue-800/50" title={`Scheduled for ${new Date(p.scheduledUploadTime).toLocaleString()}`}>
+															Scheduled
+														</span>
+													)}
+													<span
+														className={`text-xs px-2 py-1 rounded ${p.inStock ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
+													>
+														{p.inStock
+															? "In Stock"
+															: "Out of Stock"}
+													</span>
+												</div>
 											</div>
 
 											{/* Actions */}
@@ -1047,6 +1098,40 @@ const ProductManagement = () => {
 
 								<div className="space-y-4 pt-4 border-t border-zinc-800">
 									<h3 className="text-lg font-bold text-white">
+										Visibility & Scheduling
+									</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<label className="flex items-center gap-2 cursor-pointer mb-2">
+												<input
+													type="checkbox"
+													name="isActive"
+													checked={!formData.isActive}
+													onChange={(e) => setFormData(p => ({...p, isActive: !e.target.checked}))}
+													className="w-4 h-4 rounded bg-zinc-800 border-zinc-700 text-purple-600 focus:ring-purple-500"
+												/>
+												<span className="text-sm font-medium text-white">Private Mode (Hide Product)</span>
+											</label>
+											<p className="text-xs text-zinc-500 ml-6">If enabled, the product will be inactive and hidden from the main site. Use this for invalid links.</p>
+										</div>
+										<div>
+											<label className="block text-sm font-medium text-zinc-200 mb-2">
+												Schedule Upload Time
+											</label>
+											<input
+												type="datetime-local"
+												name="scheduledUploadTime"
+												value={formData.scheduledUploadTime}
+												onChange={handleInputChange}
+												className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+											/>
+											<p className="text-xs text-zinc-500 mt-1">Leave empty to publish immediately (or use active/inactive status).</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="space-y-4 pt-4 border-t border-zinc-800">
+									<h3 className="text-lg font-bold text-white">
 										Target Regions
 									</h3>
 									<div className="flex flex-wrap gap-3">
@@ -1244,6 +1329,52 @@ const ProductManagement = () => {
 					</div>
 				)}
 			</div>
+			{/* Scheduled Products Modal */}
+			{showScheduledModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+					<div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+						<div className="p-6 border-b border-zinc-800 flex justify-between items-center">
+							<div>
+								<h2 className="text-xl font-bold text-white">Scheduled Products</h2>
+								<p className="text-zinc-400 text-sm mt-1">Manage products that are scheduled to be published in the future.</p>
+							</div>
+							<button onClick={() => setShowScheduledModal(false)} className="text-zinc-400 hover:text-white transition-colors">
+								<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
+						<div className="p-6 overflow-y-auto flex-1">
+							{products.filter(p => p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date()).length === 0 ? (
+								<div className="text-center py-12">
+									<BoxIcon className="mx-auto h-12 w-12 text-zinc-600 mb-3" />
+									<p className="text-zinc-400 font-medium">No scheduled products.</p>
+								</div>
+							) : (
+								<div className="space-y-4">
+									{products.filter(p => p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date()).map(p => (
+										<div key={p._id} className="flex items-center justify-between bg-zinc-800/50 p-4 rounded-xl border border-zinc-700 hover:border-purple-500/50 transition-colors">
+											<div className="flex items-center gap-4">
+												<img src={p.images?.[0]?.url || "placeholder.jpg"} className="w-14 h-14 rounded-lg object-cover border border-zinc-700" alt="" />
+												<div>
+													<p className="text-white font-bold text-sm line-clamp-1">{p.title}</p>
+													<p className="text-purple-400 text-xs mt-1 flex items-center gap-1">
+														<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+														</svg>
+														Scheduled: {new Date(p.scheduledUploadTime).toLocaleString()}
+													</p>
+												</div>
+											</div>
+											<Button size="sm" variant="secondary" onClick={() => { setShowScheduledModal(false); openEdit(p); }} className="whitespace-nowrap">Edit Product</Button>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
