@@ -34,7 +34,7 @@ app.use(cookieParser());
 // CORS configuration - handle both development and production
 const corsOrigins = process.env.NODE_ENV === 'production'
     ? (process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : '*')
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'https://animeprophecy.onrender.com/', 'https://animeprophecy.com'];
 
 
 app.use(
