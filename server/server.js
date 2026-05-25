@@ -68,15 +68,22 @@ app.use(
 app.use(requestLogger);
 
 // ===== API Routes =====
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/upload', uploadRoutes);
-// NOTE: Renamed /api/banners → /api/slides to avoid ad-blocker false positives
-app.use('/api/slides', bannerRoutes);
-app.use('/api/carousels', carouselRoutes);
-app.use('/api/newsletter', newsletterRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/trending', trendingRoutes);
+const routeMounts = [
+    ['/api/auth', '/auth', authRoutes],
+    ['/api/products', '/products', productRoutes],
+    ['/api/upload', '/upload', uploadRoutes],
+    // NOTE: Renamed /api/banners → /api/slides to avoid ad-blocker false positives
+    ['/api/slides', '/slides', bannerRoutes],
+    ['/api/carousels', '/carousels', carouselRoutes],
+    ['/api/newsletter', '/newsletter', newsletterRoutes],
+    ['/api/settings', '/settings', settingsRoutes],
+    ['/api/trending', '/trending', trendingRoutes],
+];
+
+for (const [apiPath, legacyPath, router] of routeMounts) {
+    app.use(apiPath, router);
+    app.use(legacyPath, router);
+}
 
 // ===== Health Check =====
 app.get('/api/health', (req, res) => {
