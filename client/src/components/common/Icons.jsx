@@ -37,6 +37,7 @@ export {
 	FaYoutube as YoutubeIcon,
 	FaInstagram as InstagramIcon,
 	FaFacebook as FacebookIcon,
+	FaPinterest as PintrestIcon,
 } from "react-icons/fa";
 
 // Remix Icons
