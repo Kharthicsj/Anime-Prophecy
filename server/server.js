@@ -32,14 +32,36 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 
 // CORS configuration - handle both development and production
+const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, '');
+
 const corsOrigins = process.env.NODE_ENV === 'production'
-    ? (process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : '*')
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'https://animeprophecy.onrender.com/', 'https://animeprophecy.com'];
+    ? [process.env.CLIENT_URL, 'https://animeprophecy.onrender.com']
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com'];
+
+const allowedOrigins = new Set(
+    corsOrigins
+        .flatMap((origin) => (origin ? origin.split(',') : []))
+        .map(normalizeOrigin)
+        .filter(Boolean)
+);
 
 
 app.use(
     cors({
-        origin: corsOrigins,
+        origin: (origin, callback) => {
+            if (!origin) {
+                callback(null, true);
+                return;
+            }
+
+            const normalizedOrigin = normalizeOrigin(origin);
+            if (allowedOrigins.has(normalizedOrigin)) {
+                callback(null, true);
+                return;
+            }
+
+            callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
     })
 );
