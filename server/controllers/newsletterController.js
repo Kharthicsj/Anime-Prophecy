@@ -6,6 +6,8 @@ import nodemailer from 'nodemailer';
 // Using Brevo (formerly Sendinblue) free tier via SMTP relay.
 // Swap to Brevo's Transactional Email API (v3) when upgrading to paid.
 const createBrevoTransport = () => {
+    // If running in production (e.g. AWS/DigitalOcean) and port 587 is blocked,
+    // explicitly try 2525 or 465 instead via environment variable.
     const port = parseInt(process.env.SMTP_PORT) || 587;
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
@@ -15,6 +17,12 @@ const createBrevoTransport = () => {
             user: process.env.SMTP_USER || process.env.BREVO_SMTP_LOGIN || process.env.BREVO_SMTP_USER,
             pass: process.env.SMTP_PASS || process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY,
         },
+        pool: true,             // Use pooled connections instead of creating a new one for every message
+        maxConnections: 5,      // Limit simultaneous connections to Brevo
+        maxMessages: 100,       // Max messages per connection
+        connectionTimeout: 10000, // 10s timeout (fail fast instead of hanging 120s)
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
         tls: {
             // Do not fail on invalid certs in production sometimes needed for certain hostings
             rejectUnauthorized: false
