@@ -41,7 +41,7 @@ const CountrySelectDropdown = ({ value, onChange, disabled }) => {
 	}, []);
 
 	return (
-		<div ref={rootRef} className="relative min-w-[200px] flex-[0_1_220px]">
+		<div ref={rootRef} className="relative w-full flex-1 sm:min-w-[180px]">
 			<button
 				type="button"
 				disabled={disabled}
@@ -115,7 +115,8 @@ const CountrySelectDropdown = ({ value, onChange, disabled }) => {
 
 const NewsletterBar = () => {
 	const [email, setEmail] = useState("");
-	const [country, setCountry] = useState("");
+	const [country, setCountry] = useState("Worldwide");
+	const [customCountry, setCustomCountry] = useState("");
 	const [status, setStatus] = useState(null);
 	const [msg, setMsg] = useState("");
 
@@ -123,17 +124,25 @@ const NewsletterBar = () => {
 		e.preventDefault();
 		if (!email.trim()) return;
 		setStatus("loading");
-		const savedCountry = country === "Others" ? "Worldwide" : country;
+
+		let finalCountry = country;
+		if (country === "Others") {
+			finalCountry = customCountry.trim() 
+				? customCountry.trim().replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())))
+				: "Worldwide";
+		}
+
 		try {
 			const res = await apiClient.post("/newsletter/subscribe", {
 				email: email.trim(),
-				country: savedCountry,
+				country: finalCountry,
 				source: "landing",
 			});
 			setMsg(res.data?.message || "Subscribed successfully!");
 			setStatus("success");
 			setEmail("");
-			setCountry("");
+			setCountry("Worldwide");
+			setCustomCountry("");
 		} catch (err) {
 			setMsg(
 				err.response?.data?.message ||
@@ -173,11 +182,24 @@ const NewsletterBar = () => {
 						disabled={status === "loading"}
 						className="min-w-0 flex-1 rounded-full border border-purple-500/30 bg-zinc-900/80 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500/60 sm:min-w-[200px]"
 					/>
-					<CountrySelectDropdown
-						value={country}
-						onChange={setCountry}
-						disabled={status === "loading"}
-					/>
+					<div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+						<CountrySelectDropdown
+							value={country}
+							onChange={setCountry}
+							disabled={status === "loading"}
+						/>
+						{country === "Others" && (
+							<input
+								type="text"
+								value={customCountry}
+								onChange={(e) => setCustomCountry(e.target.value)}
+								placeholder="Enter Country"
+								required
+								disabled={status === "loading"}
+								className="min-w-[120px] w-full flex-1 rounded-full border border-purple-500/30 bg-zinc-900/80 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500/60"
+							/>
+						)}
+					</div>
 					<button
 						type="submit"
 						disabled={status === "loading"}
@@ -274,12 +296,12 @@ const Footer = () => {
 							</h3>
 						</div>
 						<p className="text-zinc-400 text-sm leading-6">
-							A premium anime commerce experience with regional
-							storefronts, curated product discovery, and a dark
-							cinematic interface.
+							A Premium Anime Commerce Experience With Regional
+							Storefronts, Curated Product Discovery, And A Dark
+							Cinematic Interface.
 						</p>
 						<p className="text-zinc-500 text-xs">
-							© 2026 Prophecy Hub. All rights reserved.
+							© 2026 Prophecy Hub. All Rights Reserved.
 						</p>
 					</div>
 
@@ -340,7 +362,7 @@ const Footer = () => {
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8 border-t border-zinc-800">
 					<div className="space-y-1">
-						<p className="text-zinc-500 text-xs">EMAIL</p>
+						<p className="text-zinc-500 text-xs">Email</p>
 						<a
 							href={`mailto:${CONTACT_EMAIL}`}
 							className="text-white font-semibold hover:text-purple-400 transition-colors"
@@ -349,7 +371,7 @@ const Footer = () => {
 						</a>
 					</div>
 					<div className="space-y-1">
-						<p className="text-zinc-500 text-xs">LOCATION</p>
+						<p className="text-zinc-500 text-xs">Location</p>
 						<p className="text-white font-semibold">
 							Anime Merchandise Hub, Global
 						</p>
@@ -360,17 +382,17 @@ const Footer = () => {
 			<div className="border-t border-zinc-800 bg-zinc-900/40 py-5">
 				<div className="max-w-7xl mx-auto px-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-xs text-zinc-500">
 					<p>
-						Prophecy Hub is not affiliated with any anime studios or
-						production companies. Product links may generate
-						affiliate commissions.
+						Prophecy Hub Is Not Affiliated With Any Anime Studios Or
+						Production Companies. Product Links May Generate
+						Affiliate Commissions.
 					</p>
 					<p className="flex items-center justify-end gap-1.5 text-right text-zinc-400">
-						<span>Made with</span>
+						<span>Made With</span>
 						<HeartIcon
 							className="h-3.5 w-3.5 shrink-0 text-rose-400"
 							aria-hidden
 						/>
-						<span>by</span>
+						<span>By</span>
 						<a
 							href="https://kharthicsj.onrender.com"
 							target="_blank"

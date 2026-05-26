@@ -191,7 +191,7 @@ const ImmersiveHero = ({
 						/>
 						<div className="min-w-0">
 							<h1 className="hero-title-glow mb-1 text-[clamp(2rem,6vw,4rem)] font-black leading-[1.05] tracking-tight text-white">
-								Prophecy Hub
+								Prophecy Hub <span aria-hidden="true">🔮</span>
 							</h1>
 							<p className="text-[clamp(0.85rem,2vw,1.1rem)] font-semibold uppercase tracking-[0.2em] text-violet-400/90">
 								Anime Merchandise Hub

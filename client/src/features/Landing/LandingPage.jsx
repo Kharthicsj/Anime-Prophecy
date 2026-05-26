@@ -398,7 +398,7 @@ const LandingPage = () => {
 						}}
 					>
 						{trendingProducts.map((p) => (
-							<ProductCard key={p._id} product={p} />
+							<ProductCard key={p._id} product={p} showCountryTag={true} />
 						))}
 					</div>
 				) : (

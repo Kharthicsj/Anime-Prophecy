@@ -40,27 +40,13 @@ const productSchema = new mongoose.Schema(
         },
         animeTag: {
             type: String,
-            enum: [
-                'AOT',
-                'JJK',
-                'Naruto',
-                'One Piece',
-                'Demon Slayer',
-                'MHA',
-                'Steins;Gate',
-                'Death Note',
-                'Code Geass',
-                'Spy x Family',
-                'Chainsaw Man',
-                'Solo Leveling',
-                'Other',
-            ],
             required: [true, 'Anime tag is required'],
+            trim: true,
         },
         store: {
             type: String,
-            enum: ['Amazon', 'Flipkart', 'Etsy', 'eBay', 'AliExpress', 'Other'],
             required: [true, 'Store is required'],
+            trim: true,
         },
         affiliateLink: {
             type: String,
@@ -87,21 +73,8 @@ const productSchema = new mongoose.Schema(
         },
         category: {
             type: String,
-            enum: [
-                'T-Shirts',
-                'Hoodies',
-                'Figures',
-                'Posters',
-                'Keychains',
-                'Mouse Pads',
-                'Accessories',
-                'Cosplay',
-                'Stickers',
-                'Phone Cases',
-                'Mugs',
-                'More',
-            ],
             required: [true, 'Category is required'],
+            trim: true,
         },
         subCategory: {
             type: String,
@@ -110,7 +83,6 @@ const productSchema = new mongoose.Schema(
         },
         countries: {
             type: [String],
-            enum: ['US', 'Japan', 'UK', 'South Korea', 'India', 'Worldwide'],
             required: [true, 'At least one country is required'],
         },
         rating: {

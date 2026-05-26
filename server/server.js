@@ -85,6 +85,11 @@ for (const [apiPath, legacyPath, router] of routeMounts) {
     app.use(legacyPath, router);
 }
 
+// ===== Root Route =====
+app.get('/', (req, res) => {
+    res.status(200).type('text').send('Server is running');
+});
+
 // ===== Health Check =====
 app.get('/api/health', (req, res) => {
     res.json({

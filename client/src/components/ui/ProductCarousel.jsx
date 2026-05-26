@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import apiClient from "../../services/apiClient";
 
 /**
  * ProductCarousel — horizontal slide transition with infinite loop autoplay.
@@ -10,6 +12,7 @@ const ProductCarousel = ({
 	autoPlayMs = 5000,
 	showProgress = true,
 }) => {
+	const navigate = useNavigate();
 	const [idx, setIdx] = useState(0);
 	const [isTransitioning, setIsTransitioning] = useState(true);
 	const idxRef = useRef(0);
@@ -103,49 +106,79 @@ const ProductCarousel = ({
 							className="block h-full w-full object-cover"
 							draggable={false}
 						/>
-						{/* Foggy scrim — soft white mist, strong where captions sit */}
-						<div
-							className="pointer-events-none absolute inset-0 backdrop-blur-[2px]"
-							style={{
-								background:
-									"linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 32%, rgba(255,255,255,0.25) 55%, transparent 75%)",
-							}}
-							aria-hidden
-						/>
+						{/* Cinematic dark overlay — transparent at top, deep at bottom for text */}
 						<div
 							className="pointer-events-none absolute inset-0"
 							style={{
 								background:
-									"linear-gradient(105deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.65) 38%, rgba(255,255,255,0.15) 58%, transparent 78%)",
+									"linear-gradient(to top, rgba(9,9,11,0.95) 0%, rgba(9,9,11,0.6) 40%, transparent 100%)",
 							}}
 							aria-hidden
 						/>
-						{(item.title || item.description || item.link) && (
-							<div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-14 pt-6 sm:px-8 sm:pb-16 md:px-10">
-								<div className="max-w-xl">
-									{item.title && (
-										<h3 className="mb-2 text-lg font-extrabold leading-snug text-zinc-900 drop-shadow-[0_1px_3px_rgba(255,255,255,1)] sm:text-2xl">
-											{item.title}
-										</h3>
-									)}
-									{item.description && (
-										<p className="mb-0 line-clamp-3 text-sm leading-relaxed text-zinc-800 drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)] sm:text-base">
-											{item.description}
-										</p>
-									)}
-									{item.link && (
-										<a
-											href={item.link}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
-										>
-											Shop Now <FaArrowRight size={12} />
-										</a>
-									)}
+						{(item.title || item.description || item.link || item.productId) && (
+						<div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-14 pt-6 sm:px-8 sm:pb-16 md:px-10">
+							<div className="max-w-xl">
+								{/* Country tags */}
+								<div className="flex flex-wrap gap-2 mb-2">
+									{(() => {
+										if (item.countries && item.countries.length > 0) {
+											const filtered = item.countries.filter(c => 
+												c.toLowerCase() !== 'other' && c.toLowerCase() !== 'worldwide'
+											);
+											if (filtered.length > 0) {
+												return filtered.map((c, idx) => (
+													<span key={idx} className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
+														{c}
+													</span>
+												));
+											}
+										}
+										if (item.country) {
+											return (
+												<span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
+													{item.country === "ALL" ? "Worldwide" : item.country}
+												</span>
+											);
+										}
+										return null;
+									})()}
 								</div>
+								{item.title && (
+									<h3 className="mb-2 text-lg font-extrabold leading-snug text-white drop-shadow-md sm:text-2xl">
+										{item.title}
+									</h3>
+								)}
+								{item.description && (
+									<p className="mb-0 line-clamp-3 text-sm leading-relaxed text-zinc-300 drop-shadow sm:text-base">
+										{item.description}
+									</p>
+								)}
+								{/* Product items: navigate to product page; banner items: open link */}
+								{item.productId ? (
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											apiClient.post(`/products/${item.productId}/click`).catch(() => {});
+											navigate(`/product/${item.productId}`);
+										}}
+										className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
+									>
+										Shop Now <FaArrowRight size={12} />
+									</button>
+								) : item.link ? (
+									<a
+										href={item.link}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
+									>
+										Shop Now <FaArrowRight size={12} />
+									</a>
+								) : null}
 							</div>
-						)}
+						</div>
+					)}
 					</div>
 				))}
 			</div>

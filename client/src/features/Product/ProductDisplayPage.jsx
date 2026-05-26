@@ -245,7 +245,7 @@ const ProductDisplayPage = () => {
 								
 								{/* Floating Badges */}
 								<div className="absolute top-4 left-4 flex flex-col gap-2">
-									<span className="bg-white/10 backdrop-blur-md text-white text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded shadow-lg border border-white/20">
+									<span className="bg-white/90 backdrop-blur-md text-zinc-950 text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded shadow-xl border border-black/10">
 										{product.animeTag}
 									</span>
 									{!product.inStock && (

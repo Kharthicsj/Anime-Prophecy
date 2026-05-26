@@ -1,4 +1,5 @@
 /** Shared product filter options — aligned with server Product model enums */
+import { countries } from "../utils/countries";
 
 export const FILTER_ALL = {
 	anime: "All Anime",
@@ -36,29 +37,22 @@ export const STORE_FILTER_OPTIONS = [
 
 export const CATEGORY_FILTER_OPTIONS = [
 	FILTER_ALL.category,
-	"T-Shirts",
-	"Hoodies",
-	"Figures",
+	"Clothing",
+	"Electronics",
 	"Posters",
-	"Keychains",
-	"Mouse Pads",
+	"Gadgets",
+	"Figures",
 	"Accessories",
 	"Cosplay",
-	"Stickers",
-	"Phone Cases",
-	"Mugs",
-	"More",
+	"Other"
 ];
 
+/** Derived dynamically from the countries utility — add a country once, updates everywhere */
 export const COUNTRY_FILTER_OPTIONS = [
 	FILTER_ALL.country,
-	"US",
-	"Japan",
-	"UK",
-	"South Korea",
-	"India",
-	"Worldwide",
+	...countries.map((c) => c.value),
 ];
+
 
 export const PICKER_SORT_OPTIONS = [
 	{ value: "newest", label: "Newest first", api: "-createdAt" },

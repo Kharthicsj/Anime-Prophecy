@@ -8,7 +8,7 @@ import apiClient from "../../services/apiClient";
  * Displays anime merchandise product with image, title, and CTA.
  * Clicking anywhere on the card navigates to the Product Display Page.
  */
-const ProductCard = ({ product, className = "" }) => {
+const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 	const navigate = useNavigate();
 	
 	const mainImage =
@@ -44,11 +44,25 @@ const ProductCard = ({ product, className = "" }) => {
 					className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
 				/>
 
-				{/* Anime Tag Badge */}
-				<div className="absolute top-3 left-3">
-					<span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+				{/* Badges Container */}
+				<div className="absolute top-3 left-3 flex flex-col items-start gap-2">
+					<span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
 						{product.animeTag}
 					</span>
+					{showCountryTag && product.countries && (
+						<div className="flex flex-wrap gap-1.5">
+							{product.countries
+								.filter((c) => c.toLowerCase() !== "other" && c.toLowerCase() !== "worldwide")
+								.map((c, idx) => (
+									<span
+										key={idx}
+										className="bg-zinc-900/90 text-zinc-300 text-[0.65rem] font-bold px-2 py-0.5 rounded border border-zinc-700 backdrop-blur-sm shadow-md tracking-wider uppercase"
+									>
+										{c}
+									</span>
+								))}
+						</div>
+					)}
 				</div>
 
 				{/* Store Badge */}

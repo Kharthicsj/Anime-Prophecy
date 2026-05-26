@@ -8,36 +8,25 @@ import { getProductImage } from "../../utils/productHelpers";
 const countryToIso = (value) =>
 	countries.find((c) => c.value === value)?.isoCode || "ALL";
 
-const COUNTRY_OPTIONS = [
-	{ value: "Worldwide", label: "Global — All Countries" },
-	{ value: "US", label: "United States" },
-	{ value: "Japan", label: "Japan" },
-	{ value: "UK", label: "United Kingdom" },
-	{ value: "South Korea", label: "South Korea" },
-	{ value: "India", label: "India" },
-];
+const toTitleCase = (str) =>
+	str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 const inputClass =
 	"w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white outline-none focus:border-purple-500 transition-colors";
 
 const normalizeCountryDisplay = (raw) => {
 	if (!raw?.trim()) return { value: null, label: "—" };
-	const map = {
-		us: "US", jp: "Japan", japan: "Japan", in: "India",
-		india: "India", gb: "UK", uk: "UK", kr: "South Korea",
-		"south korea": "South Korea", worldwide: "Worldwide",
-	};
-	const key = raw.trim().toLowerCase();
-	const value = map[key] || raw.trim();
-	const label = COUNTRY_OPTIONS.find((c) => c.value === value)?.label || value;
+	const value = raw.trim().toLowerCase();
+	const label = value === "worldwide" ? "Global — All Countries" : toTitleCase(value);
 	return { value, label };
 };
 
 // ─── Recipient Mode ───────────────────────────────────────────────────────────
 const RECIPIENT_MODES = [
-	{ id: "first300", label: "First 300", desc: "Send to newest 300 subscribers" },
-	{ id: "custom", label: "Custom Count", desc: "Enter how many subscribers to target" },
-	{ id: "selected", label: "Select Recipients", desc: "Manually check specific subscribers" },
+	{ id: "first300", label: "First 300", desc: "Send to newest 1-300" },
+	{ id: "next300", label: "Next 300", desc: "Send to subscribers 301-600" },
+	{ id: "custom", label: "Custom", desc: "Enter specific count" },
+	{ id: "selected", label: "Selected", desc: "Manual check" },
 ];
 
 const NewsletterPanel = () => {
@@ -46,6 +35,9 @@ const NewsletterPanel = () => {
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [tableCountry, setTableCountry] = useState("Worldwide");
+	const [availableCountries, setAvailableCountries] = useState([
+		{ value: "Worldwide", label: "Global — All Countries" }
+	]);
 
 	// Compose form
 	const [newsSubject, setNewsSubject] = useState("");
@@ -66,7 +58,18 @@ const NewsletterPanel = () => {
 	const [modalLoading, setModalLoading] = useState(false);
 	const [modalPage, setModalPage] = useState(1);
 	const [modalTotal, setModalTotal] = useState(0);
-	const MODAL_LIMIT = 50;
+	const MODAL_LIMIT = 15;
+
+	// Daily Tracker
+	const todayStr = new Date().toISOString().split("T")[0];
+	const [dailySent, setDailySent] = useState(() => {
+		const stored = localStorage.getItem("brevoDailySent");
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			if (parsed.date === todayStr) return parsed.count;
+		}
+		return 0;
+	});
 
 	const flash = (text, type = "success") => {
 		setMsg({ text, type });
@@ -77,12 +80,26 @@ const NewsletterPanel = () => {
 		setLoading(true);
 		try {
 			const params = new URLSearchParams({ page: String(p), limit: "20" });
-			if (country && country !== "Worldwide") params.set("country", country);
+			if (country && country.toLowerCase() !== "worldwide") {
+				params.set("country", country);
+			}
 			const res = await apiClient.get(`/newsletter/subscribers?${params}`);
 			if (res.data.success) {
 				setSubscribers(res.data.data.subscribers);
 				setTotal(res.data.data.pagination.total);
 				setPage(p);
+				if (res.data.data.uniqueCountries) {
+					const mapped = [
+						{ value: "Worldwide", label: "Global — All Countries" },
+						...res.data.data.uniqueCountries
+							.filter(c => c && c.toLowerCase() !== "worldwide")
+							.map(c => ({
+								value: c,
+								label: toTitleCase(c)
+							}))
+					];
+					setAvailableCountries(mapped);
+				}
 			}
 		} catch {
 			flash("Failed to fetch subscribers", "error");
@@ -103,7 +120,9 @@ const NewsletterPanel = () => {
 				page: String(p),
 				limit: String(MODAL_LIMIT),
 			});
-			if (sendCountry && sendCountry !== "Worldwide") params.set("country", sendCountry);
+			if (sendCountry && sendCountry.toLowerCase() !== "worldwide") {
+				params.set("country", sendCountry);
+			}
 			const res = await apiClient.get(`/newsletter/subscribers?${params}`);
 			if (res.data.success) {
 				setModalSubscribers(res.data.data.subscribers);
@@ -116,6 +135,13 @@ const NewsletterPanel = () => {
 			setModalLoading(false);
 		}
 	}, [sendCountry]);
+
+	// Auto-fetch modal subscribers when sendCountry changes if modal is open
+	useEffect(() => {
+		if (showRecipientModal) {
+			fetchModalSubscribers(1);
+		}
+	}, [sendCountry, showRecipientModal, fetchModalSubscribers]);
 
 	const removeSelectedProduct = (id) =>
 		setSelectedProducts((prev) => prev.filter((p) => p._id !== id));
@@ -146,7 +172,9 @@ const NewsletterPanel = () => {
 				subject: newsSubject,
 				content: newsContent,
 				country: sendCountry,
+				siteUrl: window.location.origin,
 				products: selectedProducts.map((p) => ({
+					id: p._id,
 					title: p.title,
 					category: p.category,
 					subCategory: p.subCategory || "",
@@ -164,6 +192,15 @@ const NewsletterPanel = () => {
 			if (res.data.success) {
 				setSendResult(res.data);
 				flash(res.data.message, "success");
+				
+				// Update daily sent counter
+				const sentCount = res.data.sent || 0;
+				setDailySent((prev) => {
+					const newTotal = prev + sentCount;
+					localStorage.setItem("brevoDailySent", JSON.stringify({ date: todayStr, count: newTotal }));
+					return newTotal;
+				});
+
 				setNewsSubject("");
 				setNewsContent("");
 				setSelectedProducts([]);
@@ -179,7 +216,7 @@ const NewsletterPanel = () => {
 	};
 
 	const tableCountryLabel =
-		COUNTRY_OPTIONS.find((c) => c.value === tableCountry)?.label || tableCountry;
+		availableCountries.find((c) => c.value === tableCountry)?.label || tableCountry;
 
 	const toggleEmail = (email) => {
 		setSelectedEmails((prev) => {
@@ -202,6 +239,7 @@ const NewsletterPanel = () => {
 
 	const recipientCount =
 		recipientMode === "first300" ? Math.min(300, modalTotal) :
+		recipientMode === "next300" ? Math.min(300, Math.max(0, modalTotal - 300)) :
 		recipientMode === "custom" ? Math.min(parseInt(customCount) || 300, modalTotal) :
 		selectedEmails.size;
 
@@ -229,17 +267,39 @@ const NewsletterPanel = () => {
 						<div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur px-6 py-5 flex items-center justify-between">
 							<div>
 								<h3 className="text-lg font-bold text-white">Select Recipients</h3>
-								<p className="text-xs text-zinc-500 mt-0.5">
-									{modalTotal} subscribers in{" "}
-									{sendCountry === "Worldwide" ? "all regions" : sendCountry}
+								<p className="text-xs text-zinc-500 mt-0.5 flex flex-wrap gap-4">
+									<span className="inline-flex items-center gap-1.5">
+										<span className="font-bold text-violet-300">{modalTotal}</span> matching subscribers
+									</span>
+									<span className="inline-flex items-center gap-1.5">
+										Sent Today: <span className={`font-bold ${dailySent >= 300 ? "text-red-400" : "text-amber-400"}`}>{dailySent} / 300</span> limit
+									</span>
 								</p>
 							</div>
-							<button
-								onClick={() => setShowRecipientModal(false)}
-								className="text-zinc-400 hover:text-white transition-colors text-xl leading-none"
-							>
-								×
-							</button>
+							<div className="flex items-center gap-3">
+								<div className="relative">
+									<select
+										value={sendCountry}
+										onChange={(e) => setSendCountry(e.target.value)}
+										className="appearance-none rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/50 hover:bg-zinc-800 hover:text-white transition-all pl-3 pr-8 py-1.5 min-w-[180px] cursor-pointer shadow-sm"
+									>
+										{availableCountries.map((c) => (
+											<option key={c.value} value={c.value}>{c.label}</option>
+										))}
+									</select>
+									<div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500">
+										<svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+									</div>
+								</div>
+								<div className="h-4 w-px bg-zinc-700/50 mx-1"></div>
+								<button
+									type="button"
+									onClick={() => setShowRecipientModal(false)}
+									className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all"
+								>
+									<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+								</button>
+							</div>
 						</div>
 
 						<div className="p-6 space-y-6">
@@ -283,30 +343,33 @@ const NewsletterPanel = () => {
 								</div>
 							)}
 
-							{/* Checkbox selection */}
+							{/* Select All / Select Page header row for 'selected' mode */}
 							{recipientMode === "selected" && (
 								<div>
 									<div className="flex items-center justify-between mb-3">
-										<p className="text-sm font-medium text-zinc-400">
-											Selected: <span className="text-violet-300 font-bold">{selectedEmails.size}</span>
-										</p>
+										<label className="flex items-center gap-2 cursor-pointer">
+											<input
+												type="checkbox"
+												checked={modalSubscribers.length > 0 && modalSubscribers.every((s) => selectedEmails.has(s.email))}
+												onChange={toggleAllVisible}
+												className="accent-purple-500 w-4 h-4"
+											/>
+											<span className="text-sm font-medium text-zinc-400">
+												{modalSubscribers.every((s) => selectedEmails.has(s.email)) ? "Deselect Page" : "Select Page"}
+											</span>
+										</label>
 										<div className="flex items-center gap-3">
-											<button
-												type="button"
-												onClick={toggleAllVisible}
-												className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
-											>
-												{modalSubscribers.every((s) => selectedEmails.has(s.email))
-													? "Deselect page"
-													: "Select page"}
-											</button>
+											<p className="text-sm font-medium text-zinc-400">
+												Selected: <span className="text-violet-300 font-bold">{selectedEmails.size}</span>
+												{" / "}<span className="text-zinc-500">{modalTotal}</span>
+											</p>
 											{selectedEmails.size > 0 && (
 												<button
 													type="button"
 													onClick={() => setSelectedEmails(new Set())}
 													className="text-xs text-red-400 hover:text-red-300 transition-colors"
 												>
-													Clear all
+													Clear All
 												</button>
 											)}
 										</div>
@@ -442,20 +505,7 @@ const NewsletterPanel = () => {
 				<section className="lg:col-span-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
 					<h3 className="mb-6 text-lg font-bold text-white">Compose Newsletter</h3>
 					<div className="space-y-6">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-400">
-								Target region (recipients)
-							</label>
-							<select
-								value={sendCountry}
-								onChange={(e) => setSendCountry(e.target.value)}
-								className={inputClass}
-							>
-								{COUNTRY_OPTIONS.map((c) => (
-									<option key={c.value} value={c.value}>{c.label}</option>
-								))}
-							</select>
-						</div>
+
 						<div>
 							<label className="mb-2 block text-sm font-medium text-zinc-400">Subject</label>
 							<input
@@ -595,7 +645,7 @@ const NewsletterPanel = () => {
 							}}
 							className={inputClass}
 						>
-							{COUNTRY_OPTIONS.map((c) => (
+							{availableCountries.map((c) => (
 								<option key={c.value} value={c.value}>{c.label}</option>
 							))}
 						</select>

@@ -5,16 +5,22 @@ import nodemailer from 'nodemailer';
 // ─── Brevo SMTP transporter ───────────────────────────────────────────────────
 // Using Brevo (formerly Sendinblue) free tier via SMTP relay.
 // Swap to Brevo's Transactional Email API (v3) when upgrading to paid.
-const createBrevoTransport = () =>
-    nodemailer.createTransport({
-        host: 'smtp-relay.brevo.com',
-        port: 587,
-        secure: false,
+const createBrevoTransport = () => {
+    const port = parseInt(process.env.SMTP_PORT) || 587;
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+        port: port,
+        secure: port === 465, // true for 465, false for other ports
         auth: {
-            user: process.env.BREVO_SMTP_LOGIN || process.env.BREVO_SMTP_USER,
-            pass: process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY,
+            user: process.env.SMTP_USER || process.env.BREVO_SMTP_LOGIN || process.env.BREVO_SMTP_USER,
+            pass: process.env.SMTP_PASS || process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY,
         },
+        tls: {
+            // Do not fail on invalid certs in production sometimes needed for certain hostings
+            rejectUnauthorized: false
+        }
     });
+};
 
 // ─── HTML email template ──────────────────────────────────────────────────────
 const buildNewsletterHTML = ({ subject, content, products, siteUrl = 'https://prophecyhub.com' }) => {
@@ -32,7 +38,7 @@ const buildNewsletterHTML = ({ subject, content, products, siteUrl = 'https://pr
                 <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#fff;">${p.title}</p>
                 <p style="margin:0 0 4px;font-size:12px;color:#a855f7;">${p.category}${p.subCategory ? ` · ${p.subCategory}` : ''}</p>
                 <p style="margin:0 0 8px;font-size:13px;color:#c084fc;font-weight:600;">${p.currency} ${p.price}</p>
-                <a href="${p.affiliateLink}" style="display:inline-block;padding:5px 14px;background:#7c3aed;color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">Shop Now ↗</a>
+                <a href="${siteUrl}/product/${p.id}" style="display:inline-block;padding:5px 14px;background:#7c3aed;color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">Shop Now ↗</a>
               </td>
             </tr>
           </table>
@@ -153,19 +159,21 @@ export const getSubscribers = asyncHandler(async (req, res) => {
         }));
     }
 
-    const [subscribers, total] = await Promise.all([
+    const [subscribers, total, uniqueCountries] = await Promise.all([
         Newsletter.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .select('email country source createdAt'),
         Newsletter.countDocuments(filter),
+        Newsletter.distinct('country', { isActive: true }),
     ]);
 
     res.json({
         success: true,
         data: {
             subscribers,
+            uniqueCountries: uniqueCountries.filter(Boolean),
             pagination: { total, page, limit, pages: Math.ceil(total / limit) },
         },
     });
@@ -176,11 +184,12 @@ export const broadcastNewsletter = asyncHandler(async (req, res) => {
     const {
         subject,
         content,
-        country,       // region filter: 'Worldwide' | 'US' | 'Japan' | ...
-        products = [], // array of product objects from client
-        recipientMode, // 'first300' | 'custom' | 'selected'
+        products = [],
+        country,       // optional target country
+        recipientMode, // 'first300', 'custom', 'selected'
         customCount,   // number (for custom mode)
         selectedEmails,// array of emails (for selected mode)
+        siteUrl,       // frontend URL for product linking
     } = req.body;
 
     if (!subject?.trim() || !content?.trim()) {
@@ -205,11 +214,15 @@ export const broadcastNewsletter = asyncHandler(async (req, res) => {
     } else {
         // Fetch from DB based on mode
         let dbLimit = 300;
+        let dbSkip = 0;
         if (recipientMode === 'custom' && customCount) {
             dbLimit = Math.min(parseInt(customCount) || 300, 10000);
+        } else if (recipientMode === 'next300') {
+            dbSkip = 300;
         }
         const subs = await Newsletter.find(filter)
             .sort({ createdAt: -1 })
+            .skip(dbSkip)
             .limit(dbLimit)
             .select('email')
             .lean();
@@ -221,7 +234,7 @@ export const broadcastNewsletter = asyncHandler(async (req, res) => {
     }
 
     const transporter = createBrevoTransport();
-    const html = buildNewsletterHTML({ subject, content, products });
+    const html = buildNewsletterHTML({ subject, content, products, siteUrl });
 
     // Send in batches of 50 to respect free-tier rate limits
     const BATCH_SIZE = 50;

@@ -9,7 +9,7 @@ import { asyncHandler } from '../utils/errorHandler.js';
 const resolveProductItems = async (productIds = []) => {
     if (!productIds.length) return [];
     const products = await Product.find({ _id: { $in: productIds } })
-        .select('title description affiliateLink images')
+        .select('title description affiliateLink images countries')
         .lean();
     // Preserve the admin-chosen order
     return productIds
@@ -18,10 +18,12 @@ const resolveProductItems = async (productIds = []) => {
         .map((p) => {
             const mainImg = p.images?.find((i) => i.isMain) || p.images?.[0];
             return {
+                productId: p._id,
                 image: { url: mainImg?.url || '', publicId: mainImg?.publicId || '' },
                 title: p.title,
                 description: p.description || '',
                 link: p.affiliateLink || '',
+                countries: p.countries || [],
             };
         });
 };

@@ -1,11 +1,38 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import useSmartImageDrop from "../../hooks/useSmartImageDrop";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import SearchableSelect from "../../components/ui/SearchableSelect";
 import apiClient from "../../services/apiClient";
 import { BoxIcon, UploadIcon } from "../../components/common/Icons";
+import { countries } from "../../utils/countries";
+import LoadingAnimation from "../../components/common/LoadingAnimation";
+
+// ─── Utility to convert to Camel Case (Title Case for UI) ───────────
+const toTitleCase = (str) => {
+	return str.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+};
+
+// ─── Static option lists (module-level so useMemo deps are stable) ───────────
+const ANIME_OPTIONS = [
+	"Naruto", "Bleach", "One Piece", "Dragon Ball Z", "Fairy Tail",
+	"Fullmetal Alchemist: Brotherhood", "Death Note", "Neon Genesis Evangelion",
+	"Cowboy Bebop", "Steins;Gate", "Code Geass", "JoJo's Bizarre Adventure",
+	"Hunter x Hunter", "AOT", "JJK", "Demon Slayer", "MHA", "Haikyuu",
+	"Tokyo Revengers", "Chainsaw Man", "Vinland Saga", "Spy x Family",
+	"Blue Lock", "Mob Psycho 100", "One Punch Man", "Black Clover",
+	"Dr. Stone", "Sword Art Online", "Re:Zero", "Overlord", "Shield Hero",
+	"That Time I Got Reincarnated as a Slime", "Bocchi the Rock", "Oshi no Ko",
+	"Frieren: Beyond Journey's End", "Dungeon Meshi", "Solo Leveling",
+	"Kaiju No. 8", "Violet Evergarden", "Your Lie in April", "Other",
+];
+const STORE_OPTIONS = ["Amazon", "Flipkart", "Etsy", "eBay", "AliExpress", "Other"];
+const CATEGORY_OPTIONS = [
+	"Clothing", "Electronics", "Posters", "Gadgets", "Figures", "Accessories", "Cosplay", "Other"
+];
+
 
 const ProductManagement = () => {
 	const navigate = useNavigate();
@@ -36,7 +63,7 @@ const ProductManagement = () => {
 		affiliateLink: "",
 		price: "",
 		currency: "USD",
-		category: "T-Shirts",
+		category: "Clothing",
 		subCategory: "",
 		countries: ["US"],
 		colors: [],
@@ -53,173 +80,30 @@ const ProductManagement = () => {
 	const [submitting, setSubmitting] = useState(false);
 	const [uploadingCount, setUploadingCount] = useState(0);
 	const [customAnimeTag, setCustomAnimeTag] = useState("");
+	const [customCategory, setCustomCategory] = useState("");
+	const [customSubCategory, setCustomSubCategory] = useState("");
+	const [customStore, setCustomStore] = useState("");
+	const [customCountryInput, setCustomCountryInput] = useState("");
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	// Subcategory map: which categories have subcategories and what they are
 	const subCategoryMap = {
-		"T-Shirts": [
-			"Graphic Tee",
-			"Oversized Tee",
-			"Polo Shirt",
-			"V-Neck",
-			"Long Sleeve",
-			"Crop Top",
-			"Full Print",
-			"Embroidered",
-		],
-		"Hoodies": [
-			"Pullover Hoodie",
-			"Zip-Up Hoodie",
-			"Oversized Hoodie",
-			"Cropped Hoodie",
-			"Anime Print Hoodie",
-			"Embroidered Hoodie",
-			"Fleece Hoodie",
-		],
-		"Cosplay": [
-			"Full Costume",
-			"Jacket / Coat",
-			"Cape / Cloak",
-			"Uniform Set",
-			"Kimono",
-			"Shorts & Pants",
-			"Accessories Set",
-		],
-		"Figures": [
-			"Action Figure",
-			"Statue / Diorama",
-			"Nendoroid",
-			"Figma",
-			"Funko Pop",
-			"Scale Figure",
-			"Chibi Figure",
-		],
-		"Accessories": [
-			"Necklace",
-			"Bracelet",
-			"Ring",
-			"Earrings",
-			"Pin / Badge",
-			"Hat / Cap",
-			"Bag / Tote",
-			"Socks",
-			"Lanyard",
-		],
-		"Posters": [
-			"Canvas Print",
-			"Paper Poster",
-			"Metal Print",
-			"Framed Poster",
-			"Mini Poster",
-		],
-		"Stickers": [
-			"Die-Cut Sticker",
-			"Sheet Stickers",
-			"Holographic Sticker",
-			"Vinyl Sticker",
-			"Waterproof Sticker",
-		],
-		"Phone Cases": [
-			"Soft TPU Case",
-			"Hard PC Case",
-			"MagSafe Case",
-			"Wallet Case",
-			"Clear Case",
-		],
-		"Mouse Pads": [
-			"Standard",
-			"Extended / XXL",
-			"RGB Mouse Pad",
-			"3D Mouse Pad",
-		],
-		"Keychains": [
-			"Acrylic Keychain",
-			"Metal Keychain",
-			"PVC Keychain",
-			"Plush Keychain",
-		],
-		"Mugs": [
-			"Ceramic Mug",
-			"Travel Mug",
-			"Color Changing Mug",
-			"Glass Mug",
-		],
-		"More": [],
+		"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets"],
+		"Electronics": ["Mouse Pads", "Phone Cases", "Keyboards", "Headphones"],
+		"Posters": ["Canvas Print", "Paper Poster", "Metal Print", "Framed Poster"],
+		"Gadgets": ["Keychains", "Mugs", "Lamps"],
+		"Figures": ["Action Figure", "Statue", "Funko Pop", "Nendoroid"],
+		"Accessories": ["Necklace", "Bracelet", "Ring", "Earrings", "Bag"],
+		"Cosplay": ["Costume", "Props", "Wigs"],
 	};
 
-	const animeOptions = [
-		"Naruto",
-		"Bleach",
-		"One Piece",
-		"Dragon Ball Z",
-		"Fairy Tail",
-		"Fullmetal Alchemist: Brotherhood",
-		"Death Note",
-		"Neon Genesis Evangelion",
-		"Cowboy Bebop",
-		"Steins;Gate",
-		"Code Geass",
-		"JoJo's Bizarre Adventure",
-		"Hunter x Hunter",
-		"AOT",
-		"JJK",
-		"Demon Slayer",
-		"MHA",
-		"Haikyuu",
-		"Tokyo Revengers",
-		"Chainsaw Man",
-		"Vinland Saga",
-		"Spy x Family",
-		"Blue Lock",
-		"Mob Psycho 100",
-		"One Punch Man",
-		"Black Clover",
-		"Dr. Stone",
-		"Sword Art Online",
-		"Re:Zero",
-		"Overlord",
-		"Shield Hero",
-		"That Time I Got Reincarnated as a Slime",
-		"Bocchi the Rock",
-		"Oshi no Ko",
-		"Frieren: Beyond Journey's End",
-		"Dungeon Meshi",
-		"Solo Leveling",
-		"Kaiju No. 8",
-		"Violet Evergarden",
-		"Your Lie in April",
-		"Other",
-	];
-	const storeOptions = [
-		"Amazon",
-		"Flipkart",
-		"Etsy",
-		"eBay",
-		"AliExpress",
-		"Other",
-	];
-	const categoryOptions = [
-		"T-Shirts",
-		"Hoodies",
-		"Figures",
-		"Posters",
-		"Keychains",
-		"Mouse Pads",
-		"Accessories",
-		"Cosplay",
-		"Stickers",
-		"Phone Cases",
-		"Mugs",
-		"More",
-	];
-	const countryOptions = [
-		"US",
-		"Japan",
-		"UK",
-		"South Korea",
-		"India",
-		"Worldwide",
-	];
+	// Use module-level constants (stable references)
+	const animeOptions = ANIME_OPTIONS;
+	const storeOptions = STORE_OPTIONS;
+	const categoryOptions = CATEGORY_OPTIONS;
+	const countryOptions = countries.map((c) => c.value);
 	const currencyOptions = ["USD", "JPY", "GBP", "KRW", "INR", "EUR"];
+
 
 	const fetchProducts = useCallback(async () => {
 		setLoadingList(true);
@@ -235,6 +119,28 @@ const ProductManagement = () => {
 		}
 	}, []);
 
+	// Compute unique anime tags from loaded products (includes custom "Other" tags)
+	const uniqueAnimeTags = useMemo(() => {
+		const baseSet = new Set(animeOptions);
+		products.forEach((p) => {
+			if (p.animeTag) baseSet.add(p.animeTag);
+		});
+		// Remove the raw "Other" if we have real tag names
+		const allTags = [...baseSet];
+		const hasCustom = allTags.some((t) => t !== "Other" && !animeOptions.slice(0, -1).includes(t));
+		if (hasCustom) baseSet.delete("Other");
+		return [...baseSet];
+	}, [products, animeOptions]);
+
+	// Compute unique store names from loaded products
+	const uniqueStores = useMemo(() => {
+		const baseSet = new Set(storeOptions);
+		products.forEach((p) => {
+			if (p.store) baseSet.add(p.store);
+		});
+		return [...baseSet];
+	}, [products, storeOptions]);
+
 	useEffect(() => {
 		if (user && viewMode === "list") {
 			fetchProducts();
@@ -244,11 +150,14 @@ const ProductManagement = () => {
 	const handleDelete = async (id) => {
 		if (!window.confirm("Are you sure you want to delete this product?"))
 			return;
+		setIsDeleting(true);
 		try {
 			await apiClient.delete(`/products/${id}`);
 			fetchProducts();
 		} catch (err) {
 			alert("Failed to delete");
+		} finally {
+			setIsDeleting(false);
 		}
 	};
 
@@ -272,7 +181,27 @@ const ProductManagement = () => {
 		});
 		if (!animeOptions.includes(prod.animeTag)) {
 			setFormData((p) => ({ ...p, animeTag: "Other" }));
-			setCustomAnimeTag(prod.animeTag);
+			setCustomAnimeTag(prod.animeTag || "");
+		} else {
+			setCustomAnimeTag("");
+		}
+		if (!categoryOptions.includes(prod.category)) {
+			setFormData((p) => ({ ...p, category: "Other" }));
+			setCustomCategory(prod.category || "");
+		} else {
+			setCustomCategory("");
+		}
+		if (prod.subCategory && subCategoryMap[prod.category] && !subCategoryMap[prod.category].includes(prod.subCategory)) {
+			setFormData((p) => ({ ...p, subCategory: "Other" }));
+			setCustomSubCategory(prod.subCategory || "");
+		} else {
+			setCustomSubCategory("");
+		}
+		if (!storeOptions.includes(prod.store)) {
+			setFormData((p) => ({ ...p, store: "Other" }));
+			setCustomStore(prod.store || "");
+		} else {
+			setCustomStore("");
 		}
 		setImageItems(
 			prod.images
@@ -292,6 +221,10 @@ const ProductManagement = () => {
 		setEditingId(null);
 		setFormData(initialForm);
 		setCustomAnimeTag("");
+		setCustomCategory("");
+		setCustomSubCategory("");
+		setCustomStore("");
+		setCustomCountryInput("");
 		setImageItems([]);
 		setViewMode("form");
 	};
@@ -428,13 +361,35 @@ const ProductManagement = () => {
 		setSubmitError("");
 		setSuccessMessage("");
 		if (!validateForm()) return;
+
+		const eValid = { ...errors };
+		let hasErr = false;
 		if (formData.animeTag === "Other" && !customAnimeTag.trim()) {
-			setErrors((p) => ({
-				...p,
-				animeTag: "Please specify the anime name",
-			}));
+			eValid.animeTag = "Please specify the anime name";
+			hasErr = true;
+		}
+		if (formData.category === "Other" && !customCategory.trim()) {
+			eValid.category = "Please specify the category";
+			hasErr = true;
+		}
+		if (formData.subCategory === "Other" && !customSubCategory.trim()) {
+			eValid.subCategory = "Please specify the subcategory";
+			hasErr = true;
+		}
+		if (formData.store === "Other" && !customStore.trim()) {
+			eValid.store = "Please specify the store";
+			hasErr = true;
+		}
+		if (formData.countries.includes("Other") && !customCountryInput.trim()) {
+			eValid.countries = "Please specify the custom country";
+			hasErr = true;
+		}
+
+		if (hasErr) {
+			setErrors(eValid);
 			return;
 		}
+
 		setSubmitting(true);
 		try {
 			const finalImages = await uploadPendingImages();
@@ -447,8 +402,25 @@ const ProductManagement = () => {
 				...formData,
 				animeTag:
 					formData.animeTag === "Other"
-						? customAnimeTag.trim()
+						? toTitleCase(customAnimeTag.trim())
 						: formData.animeTag,
+				category:
+					formData.category === "Other"
+						? toTitleCase(customCategory.trim())
+						: formData.category,
+				subCategory:
+					formData.subCategory === "Other"
+						? toTitleCase(customSubCategory.trim())
+						: formData.subCategory,
+				store:
+					formData.store === "Other"
+						? toTitleCase(customStore.trim())
+						: formData.store,
+				countries: formData.countries.map(c => 
+					c === "Other" && customCountryInput.trim() 
+						? toTitleCase(customCountryInput.trim()) 
+						: c
+				),
 				price: parseFloat(formData.price),
 				images: finalImages.map(({ url, publicId, isMain }) => ({
 					url,
@@ -496,6 +468,13 @@ const ProductManagement = () => {
 
 	return (
 		<div className="min-h-screen bg-linear-to-br from-zinc-950 via-zinc-900 to-black pb-16">
+			{(submitting || isDeleting) && (
+				<LoadingAnimation
+					variant="overlay"
+					message={submitting ? (uploadingCount > 0 ? `Uploading ${uploadingCount} image(s)...` : "Saving Product...") : "Deleting Product..."}
+					submessage="Please wait"
+				/>
+			)}
 			<header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
 				<div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
 					<div className="flex items-center gap-3">
@@ -672,7 +651,7 @@ const ProductManagement = () => {
 									<label className="block text-xs text-zinc-500 mb-1">Anime</label>
 									<select value={filterAnime} onChange={(e) => setFilterAnime(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
 										<option value="All">All Anime</option>
-										{animeOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+										{uniqueAnimeTags.map((o) => <option key={o} value={o}>{o}</option>)}
 									</select>
 								</div>
 								{/* Store */}
@@ -680,7 +659,7 @@ const ProductManagement = () => {
 									<label className="block text-xs text-zinc-500 mb-1">Store</label>
 									<select value={filterStore} onChange={(e) => setFilterStore(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
 										<option value="All">All Stores</option>
-										{storeOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+										{uniqueStores.map((o) => <option key={o} value={o}>{o}</option>)}
 									</select>
 								</div>
 								{/* Country */}
@@ -952,38 +931,59 @@ const ProductManagement = () => {
 											<label className="block text-sm font-medium text-zinc-200 mb-2">
 												Category
 											</label>
-											<select
+											<SearchableSelect
 												name="category"
 												value={formData.category}
 												onChange={handleInputChange}
-												className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-											>
-												{categoryOptions.map((o) => (
-													<option key={o} value={o}>
-														{o}
-													</option>
-												))}
-											</select>
+												options={categoryOptions}
+												placeholder="Select Category"
+											/>
+											{formData.category === "Other" && (
+												<Input
+													placeholder="Enter custom category"
+													value={customCategory}
+													onChange={(e) => setCustomCategory(e.target.value)}
+													className="mt-2"
+													error={errors.category}
+													required
+												/>
+											)}
 										</div>
-										{/* SubCategory - shown when the selected category has subcategories */}
-										{subCategoryMap[formData.category]?.length > 0 && (
+										{/* SubCategory - shown when the selected category has subcategories or is Other */}
+										{(subCategoryMap[formData.category]?.length > 0 || formData.category === "Other") && (
 											<div>
 												<label className="block text-sm font-medium text-zinc-200 mb-2">
 													Sub Category
 													<span className="ml-2 text-xs text-zinc-500">(optional)</span>
 												</label>
-												<select
-													name="subCategory"
-													value={formData.subCategory}
-													onChange={handleInputChange}
-													className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-violet-700/50 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-												>
-													<option value="">— Select sub-category —</option>
-													{subCategoryMap[formData.category].map((sc) => (
-														<option key={sc} value={sc}>{sc}</option>
-													))}
-												</select>
-												{formData.subCategory && (
+												{formData.category === "Other" ? (
+													<Input
+														placeholder="Enter custom sub-category"
+														value={customSubCategory}
+														onChange={(e) => setCustomSubCategory(e.target.value)}
+													/>
+												) : (
+													<>
+														<SearchableSelect
+															name="subCategory"
+															value={formData.subCategory}
+															onChange={handleInputChange}
+															options={[...(subCategoryMap[formData.category] || []), "Other"]}
+															placeholder="— Select sub-category —"
+														/>
+														{formData.subCategory === "Other" && (
+															<Input
+																placeholder="Enter custom sub-category"
+																value={customSubCategory}
+																onChange={(e) => setCustomSubCategory(e.target.value)}
+																className="mt-2"
+																error={errors.subCategory}
+																required
+															/>
+														)}
+													</>
+												)}
+												{(formData.subCategory || customSubCategory) && (
 													<p className="mt-1 text-xs text-violet-400 flex items-center gap-1">
 														<span>✓</span> Sub-category set
 													</p>
@@ -994,18 +994,13 @@ const ProductManagement = () => {
 											<label className="block text-sm font-medium text-zinc-200 mb-2">
 												Anime
 											</label>
-											<select
+											<SearchableSelect
 												name="animeTag"
 												value={formData.animeTag}
 												onChange={handleInputChange}
-												className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-											>
-												{animeOptions.map((o) => (
-													<option key={o} value={o}>
-														{o}
-													</option>
-												))}
-											</select>
+												options={animeOptions}
+												placeholder="Select Anime"
+											/>
 											{formData.animeTag === "Other" && (
 												<Input
 													placeholder="Enter custom anime name"
@@ -1069,18 +1064,23 @@ const ProductManagement = () => {
 											<label className="block text-sm font-medium text-zinc-200 mb-2">
 												Store
 											</label>
-											<select
+											<SearchableSelect
 												name="store"
 												value={formData.store}
 												onChange={handleInputChange}
-												className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-											>
-												{storeOptions.map((o) => (
-													<option key={o} value={o}>
-														{o}
-													</option>
-												))}
-											</select>
+												options={storeOptions}
+												placeholder="Select Store"
+											/>
+											{formData.store === "Other" && (
+												<Input
+													placeholder="Enter custom store name"
+													value={customStore}
+													onChange={(e) => setCustomStore(e.target.value)}
+													className="mt-2"
+													error={errors.store}
+													required
+												/>
+											)}
 										</div>
 										<div className="md:col-span-2">
 											<Input
@@ -1139,15 +1139,48 @@ const ProductManagement = () => {
 											<button
 												key={c}
 												type="button"
-												onClick={() =>
-													handleCountryToggle(c)
-												}
+												onClick={() => handleCountryToggle(c)}
 												className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${formData.countries.includes(c) ? "bg-purple-600 border-purple-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}
 											>
 												{c}
 											</button>
 										))}
+										<button
+											type="button"
+											onClick={() => handleCountryToggle("Other")}
+											className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${formData.countries.includes("Other") ? "bg-purple-600 border-purple-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}
+										>
+											Other
+										</button>
 									</div>
+									{formData.countries.includes("Other") && (
+										<div className="mt-3">
+											<label className="block text-sm font-medium text-zinc-200 mb-2">Custom Countries (Press Enter to add)</label>
+											<div className="flex flex-wrap gap-2 mb-2">
+												{formData.countries.filter(c => c !== "Other" && !countryOptions.includes(c)).map(tag => (
+													<span key={tag} className="bg-purple-600/30 border border-purple-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+														{tag}
+														<button type="button" onClick={() => handleCountryToggle(tag)} className="text-purple-300 hover:text-white">&times;</button>
+													</span>
+												))}
+											</div>
+											<Input
+												placeholder="Type a country and press Enter"
+												value={customCountryInput}
+												onChange={(e) => setCustomCountryInput(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") {
+														e.preventDefault();
+														const val = toTitleCase(customCountryInput.trim());
+														if (val && !formData.countries.includes(val)) {
+															setFormData(p => ({ ...p, countries: [...p.countries, val] }));
+														}
+														setCustomCountryInput("");
+													}
+												}}
+											/>
+										</div>
+									)}
 									{errors.countries && (
 										<p className="text-red-500 text-xs mt-1">
 											{errors.countries}

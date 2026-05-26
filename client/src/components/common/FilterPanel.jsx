@@ -1,69 +1,29 @@
 import { ChevronDownIcon } from "./Icons";
 import { countries } from "../../utils/countries";
+import {
+	ANIME_FILTER_OPTIONS,
+	STORE_FILTER_OPTIONS,
+	CATEGORY_FILTER_OPTIONS,
+	COUNTRY_FILTER_OPTIONS,
+	PICKER_SORT_OPTIONS,
+	FILTER_ALL,
+} from "../../constants/productFilters";
 
 const SUB_CATEGORY_MAP = {
-	"T-Shirts": [
-		"Graphic Tee", "Oversized Tee", "Polo Shirt", "V-Neck",
-		"Long Sleeve", "Crop Top", "Full Print", "Embroidered",
-	],
-	"Hoodies": [
-		"Pullover Hoodie", "Zip-Up Hoodie", "Oversized Hoodie",
-		"Cropped Hoodie", "Anime Print Hoodie", "Embroidered Hoodie", "Fleece Hoodie",
-	],
-	"Cosplay": [
-		"Full Costume", "Jacket / Coat", "Cape / Cloak",
-		"Uniform Set", "Kimono", "Shorts & Pants", "Accessories Set",
-	],
-	"Figures": [
-		"Action Figure", "Statue / Diorama", "Nendoroid",
-		"Figma", "Funko Pop", "Scale Figure", "Chibi Figure",
-	],
-	"Accessories": [
-		"Necklace", "Bracelet", "Ring", "Earrings",
-		"Pin / Badge", "Hat / Cap", "Bag / Tote", "Socks", "Lanyard",
-	],
-	"Posters": [
-		"Canvas Print", "Paper Poster", "Metal Print", "Framed Poster", "Mini Poster",
-	],
-	"Stickers": [
-		"Die-Cut Sticker", "Sheet Stickers", "Holographic Sticker",
-		"Vinyl Sticker", "Waterproof Sticker",
-	],
-	"Phone Cases": [
-		"Soft TPU Case", "Hard PC Case", "MagSafe Case", "Wallet Case", "Clear Case",
-	],
-	"Mouse Pads": [
-		"Standard", "Extended / XXL", "RGB Mouse Pad", "3D Mouse Pad",
-	],
-	"Keychains": [
-		"Acrylic Keychain", "Metal Keychain", "PVC Keychain", "Plush Keychain",
-	],
-	"Mugs": [
-		"Ceramic Mug", "Travel Mug", "Color Changing Mug", "Glass Mug",
-	],
+	"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets", "Other"],
+	"Electronics": ["Mouse Pads", "Phone Cases", "Keyboards", "Headphones", "Other"],
+	"Posters": ["Canvas Print", "Paper Poster", "Metal Print", "Framed Poster", "Other"],
+	"Gadgets": ["Keychains", "Mugs", "Lamps", "Other"],
+	"Figures": ["Action Figure", "Statue", "Funko Pop", "Nendoroid", "Other"],
+	"Accessories": ["Necklace", "Bracelet", "Ring", "Earrings", "Bag", "Other"],
+	"Cosplay": ["Costume", "Props", "Wigs", "Other"],
 };
 
 const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter = false }) => {
-	const animeOptions = [
-		"All Anime", "AOT", "JJK", "Naruto", "One Piece",
-		"Demon Slayer", "MHA", "Chainsaw Man", "Solo Leveling",
-		"Death Note", "Spy x Family", "Other",
-	];
-	const storeOptions = [
-		"All Stores", "Amazon", "Flipkart", "Etsy", "eBay", "AliExpress",
-	];
-	const categoryOptions = [
-		"All Categories", "T-Shirts", "Hoodies", "Figures", "Posters",
-		"Keychains", "Mouse Pads", "Accessories", "Cosplay",
-		"Stickers", "Phone Cases", "Mugs", "More",
-	];
-	const sortOptions = [
-		{ label: "Newest", value: "-createdAt" },
-		{ label: "Price: Low to High", value: "price" },
-		{ label: "Price: High to Low", value: "-price" },
-		{ label: "Most Viewed", value: "-views" },
-		{ label: "Top Rated", value: "-rating" },
-	];
+	const animeOptions = ANIME_FILTER_OPTIONS;
+	const storeOptions = STORE_FILTER_OPTIONS;
+	const categoryOptions = CATEGORY_FILTER_OPTIONS;
+	const sortOptions = PICKER_SORT_OPTIONS;
 
 	const selectedCategory = selectedFilters.category || "All Categories";
 	const subCategoryOptions = SUB_CATEGORY_MAP[selectedCategory] || [];
