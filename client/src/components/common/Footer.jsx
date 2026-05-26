@@ -21,7 +21,7 @@ const NEWSLETTER_COUNTRIES = [
 	{ value: "Others", label: "Others", flagValue: null },
 ];
 
-const CONTACT_EMAIL = "animeprophecy2005@gmail.com";
+const CONTACT_EMAIL = "animeprophecybusiness@gmail.com";
 
 const CountrySelectDropdown = ({ value, onChange, disabled }) => {
 	const [open, setOpen] = useState(false);
@@ -127,8 +127,12 @@ const NewsletterBar = () => {
 
 		let finalCountry = country;
 		if (country === "Others") {
-			finalCountry = customCountry.trim() 
-				? customCountry.trim().replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())))
+			finalCountry = customCountry.trim()
+				? customCountry
+						.trim()
+						.replace(/\w\S*/g, (w) =>
+							w.replace(/^\w/, (c) => c.toUpperCase()),
+						)
 				: "Worldwide";
 		}
 
@@ -192,7 +196,9 @@ const NewsletterBar = () => {
 							<input
 								type="text"
 								value={customCountry}
-								onChange={(e) => setCustomCountry(e.target.value)}
+								onChange={(e) =>
+									setCustomCountry(e.target.value)
+								}
 								placeholder="Enter Country"
 								required
 								disabled={status === "loading"}
