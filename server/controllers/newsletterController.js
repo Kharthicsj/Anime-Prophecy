@@ -252,8 +252,10 @@ export const broadcastNewsletter = asyncHandler(async (req, res) => {
     for (let i = 0; i < emailList.length; i += BATCH_SIZE) {
         const batch = emailList.slice(i, i + BATCH_SIZE);
         try {
+            const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@prophecyhub.com';
             await transporter.sendMail({
-                from: `"Prophecy Hub" <${process.env.BREVO_SENDER_EMAIL || 'noreply@prophecyhub.com'}>`,
+                from: `"Prophecy Hub" <${senderEmail}>`,
+                to: senderEmail, // Must have a 'to' address for BCC to work reliably across all email providers
                 bcc: batch.join(','),  // use BCC for privacy
                 subject,
                 html,
