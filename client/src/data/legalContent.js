@@ -17,7 +17,7 @@ export const LEGAL_PAGES = {
 		sections: [
 			{
 				heading: "Email",
-				body: "For partnerships, listing questions, or general inquiries, reach us at animeprophecy2005@gmail.com. We aim to respond within 2–3 business days.",
+				body: "For partnerships, listing questions, or general inquiries, reach us at animeprophecybusiness@gmail.com. We aim to respond within 2–3 business days.",
 			},
 			{
 				heading: "What to include",
@@ -64,7 +64,7 @@ export const LEGAL_PAGES = {
 			},
 			{
 				heading: "Contact",
-				body: "Privacy questions: animeprophecy2005@gmail.com",
+				body: "Privacy questions: animeprophecybusiness@gmail.com",
 			},
 		],
 	},

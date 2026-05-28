@@ -34,10 +34,10 @@ const LegalPage = () => {
 				{page === "contact" && (
 					<p className="mt-10">
 						<a
-							href="mailto:animeprophecy2005@gmail.com"
+							href="mailto:animeprophecybusiness@gmail.com"
 							className="font-semibold text-violet-400 hover:text-violet-300"
 						>
-							animeprophecy2005@gmail.com
+							animeprophecybusiness@gmail.com
 						</a>
 					</p>
 				)}
