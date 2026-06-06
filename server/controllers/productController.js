@@ -307,9 +307,8 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const createProduct = asyncHandler(async (req, res) => {
-    const { title, description, images, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, scheduledUploadTime, isActive } =
+    const { title, description, images, videos, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, scheduledUploadTime, isActive } =
         req.body;
-
 
     // Validation
     if (!title || !description || !animeTag || !store || !affiliateLink || !price || !category || !countries || !images) {
@@ -321,6 +320,7 @@ export const createProduct = asyncHandler(async (req, res) => {
         title,
         description,
         images,
+        videos: Array.isArray(videos) ? videos : [],
         animeTag,
         store,
         affiliateLink,
@@ -351,9 +351,8 @@ export const createProduct = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const updateProduct = asyncHandler(async (req, res) => {
-    const { title, description, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, inStock, images, scheduledUploadTime, isActive } =
+    const { title, description, animeTag, store, affiliateLink, price, currency, colors, sizes, category, subCategory, countries, inStock, images, videos, scheduledUploadTime, isActive } =
         req.body;
-
 
     const product = await Product.findById(req.params.id);
 
@@ -380,6 +379,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     if (countries) product.countries = Array.isArray(countries) ? countries : [countries];
     if (inStock !== undefined) product.inStock = inStock;
     if (images) product.images = images;
+    if (videos !== undefined) product.videos = Array.isArray(videos) ? videos : [];
     if (scheduledUploadTime !== undefined) product.scheduledUploadTime = scheduledUploadTime;
     if (isActive !== undefined) product.isActive = isActive;
 
@@ -410,7 +410,12 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
     // Delete images from Cloudinary
     for (const image of product.images) {
-        await cloudinary.uploader.destroy(image.publicId);
+        await cloudinary.uploader.destroy(image.publicId, { resource_type: 'image' });
+    }
+
+    // Delete videos from Cloudinary
+    for (const video of (product.videos || [])) {
+        await cloudinary.uploader.destroy(video.publicId, { resource_type: 'video' });
     }
 
     await Product.findByIdAndDelete(req.params.id);

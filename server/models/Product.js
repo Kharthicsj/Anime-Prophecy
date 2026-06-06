@@ -38,6 +38,31 @@ const productSchema = new mongoose.Schema(
                 message: 'Product must have between 1 and 10 images',
             },
         },
+        videos: {
+            type: [
+                {
+                    url: {
+                        type: String,
+                        required: true,
+                    },
+                    publicId: {
+                        type: String,
+                        required: true,
+                    },
+                    isPrimary: {
+                        type: Boolean,
+                        default: false,
+                    },
+                },
+            ],
+            default: [],
+            validate: {
+                validator: function (v) {
+                    return v.length <= 3;
+                },
+                message: 'Product can have at most 3 videos',
+            },
+        },
         animeTag: {
             type: String,
             required: [true, 'Anime tag is required'],

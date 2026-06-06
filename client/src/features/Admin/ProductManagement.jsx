@@ -38,6 +38,7 @@ const ProductManagement = () => {
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const fileInputRef = useRef(null);
+	const videoFileInputRef = useRef(null);
 
 	const [viewMode, setViewMode] = useState("list"); // 'list' or 'form'
 	const [products, setProducts] = useState([]);
@@ -73,12 +74,15 @@ const ProductManagement = () => {
 	};
 	const [formData, setFormData] = useState(initialForm);
 	const [imageItems, setImageItems] = useState([]);
+	const [videoItems, setVideoItems] = useState([]);
 	const [isDragOver, setIsDragOver] = useState(false);
+	const [isVideoDragOver, setIsVideoDragOver] = useState(false);
 	const [errors, setErrors] = useState({});
 	const [submitError, setSubmitError] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [uploadingCount, setUploadingCount] = useState(0);
+	const [uploadingVideoCount, setUploadingVideoCount] = useState(0);
 	const [customAnimeTag, setCustomAnimeTag] = useState("");
 	const [customCategory, setCustomCategory] = useState("");
 	const [customSubCategory, setCustomSubCategory] = useState("");
@@ -214,6 +218,17 @@ const ProductManagement = () => {
 					}))
 				: [],
 		);
+		setVideoItems(
+			prod.videos
+				? prod.videos.map((vid) => ({
+						file: null,
+						previewUrl: null,
+						url: vid.url,
+						publicId: vid.publicId,
+						isPrimary: vid.isPrimary,
+					}))
+				: [],
+		);
 		setViewMode("form");
 	};
 
@@ -226,69 +241,89 @@ const ProductManagement = () => {
 		setCustomStore("");
 		setCustomCountryInput("");
 		setImageItems([]);
+		setVideoItems([]);
 		setViewMode("form");
 	};
 
 	const addImageFile = useCallback((file) => {
 		if (!file || !file.type.startsWith("image/")) {
-			setErrors((p) => ({
-				...p,
-				images: "Please provide an image file.",
-			}));
+			setErrors((p) => ({ ...p, images: "Please provide an image file." }));
 			return;
 		}
 		if (file.size > 10 * 1024 * 1024) {
-			setErrors((p) => ({
-				...p,
-				images: "File size must be under 10 MB.",
-			}));
+			setErrors((p) => ({ ...p, images: "File size must be under 10 MB." }));
 			return;
 		}
 		setErrors((p) => ({ ...p, images: "" }));
 		const previewUrl = URL.createObjectURL(file);
 		setImageItems((prev) => {
 			const isFirst = prev.length === 0;
-			return [
-				...prev,
-				{
-					file,
-					previewUrl,
-					url: null,
-					publicId: null,
-					isMain: isFirst,
-				},
-			];
+			return [...prev, { file, previewUrl, url: null, publicId: null, isMain: isFirst }];
 		});
 	}, []);
 
+	const addVideoFile = useCallback((file) => {
+		if (!file || !file.type.startsWith("video/")) {
+			setErrors((p) => ({ ...p, videos: "Please provide a video file." }));
+			return;
+		}
+		if (file.size > 200 * 1024 * 1024) {
+			setErrors((p) => ({ ...p, videos: "Video must be under 200 MB." }));
+			return;
+		}
+		if (videoItems.length >= 3) {
+			setErrors((p) => ({ ...p, videos: "Max 3 videos allowed." }));
+			return;
+		}
+		setErrors((p) => ({ ...p, videos: "" }));
+		const previewUrl = URL.createObjectURL(file);
+		setVideoItems((prev) => {
+			const isFirst = prev.length === 0;
+			return [...prev, { file, previewUrl, url: null, publicId: null, isPrimary: isFirst }];
+		});
+	}, [videoItems.length]);
+
 	useSmartImageDrop(addImageFile, submitting);
-	const onDragEnterBox = (e) => {
-		e.preventDefault();
-		setIsDragOver(true);
-	};
+	const onDragEnterBox = (e) => { e.preventDefault(); setIsDragOver(true); };
 	const onDragLeaveBox = () => setIsDragOver(false);
 	const onDropBox = (e) => {
-		e.preventDefault();
-		setIsDragOver(false);
+		e.preventDefault(); setIsDragOver(false);
 		addImageFile(e.dataTransfer.files?.[0]);
 	};
 	const onFileChange = (e) => {
 		addImageFile(e.target.files?.[0]);
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
+	const onVideoDragEnter = (e) => { e.preventDefault(); setIsVideoDragOver(true); };
+	const onVideoDragLeave = () => setIsVideoDragOver(false);
+	const onVideoDrop = (e) => {
+		e.preventDefault(); setIsVideoDragOver(false);
+		addVideoFile(e.dataTransfer.files?.[0]);
+	};
+	const onVideoFileChange = (e) => {
+		addVideoFile(e.target.files?.[0]);
+		if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+	};
 
 	const removeImage = (idx) => {
 		setImageItems((prev) => {
 			const next = prev.filter((_, i) => i !== idx);
-			if (next.length > 0 && !next.some((i) => i.isMain))
-				next[0].isMain = true;
+			if (next.length > 0 && !next.some((i) => i.isMain)) next[0].isMain = true;
 			return next;
 		});
 	};
 	const setMain = (idx) =>
-		setImageItems((prev) =>
-			prev.map((img, i) => ({ ...img, isMain: i === idx })),
-		);
+		setImageItems((prev) => prev.map((img, i) => ({ ...img, isMain: i === idx })));
+
+	const removeVideo = (idx) => {
+		setVideoItems((prev) => {
+			const next = prev.filter((_, i) => i !== idx);
+			if (next.length > 0 && !next.some((v) => v.isPrimary)) next[0].isPrimary = true;
+			return next;
+		});
+	};
+	const setPrimaryVideo = (idx) =>
+		setVideoItems((prev) => prev.map((vid, i) => ({ ...vid, isPrimary: i === idx })));
 
 	const uploadPendingImages = async () => {
 		const pending = imageItems.filter((i) => i.file && !i.url);
@@ -305,11 +340,7 @@ const ProductManagement = () => {
 						headers: { Authorization: `Bearer ${token}` },
 					});
 					if (res.data.success)
-						return {
-							...item,
-							url: res.data.data.url,
-							publicId: res.data.data.publicId,
-						};
+						return { ...item, url: res.data.data.url, publicId: res.data.data.publicId };
 					return item;
 				} catch (err) {
 					return item;
@@ -317,6 +348,32 @@ const ProductManagement = () => {
 			}),
 		);
 		setUploadingCount(0);
+		return uploaded;
+	};
+
+	const uploadPendingVideos = async () => {
+		const pending = videoItems.filter((v) => v.file && !v.url);
+		if (!pending.length) return videoItems;
+		setUploadingVideoCount(pending.length);
+		const token = localStorage.getItem("token");
+		const uploaded = await Promise.all(
+			videoItems.map(async (item) => {
+				if (!item.file || item.url) return item;
+				const fd = new FormData();
+				fd.append("video", item.file);
+				try {
+					const res = await apiClient.post("/upload/video", fd, {
+						headers: { Authorization: `Bearer ${token}` },
+					});
+					if (res.data.success)
+						return { ...item, url: res.data.data.url, publicId: res.data.data.publicId };
+					return item;
+				} catch (err) {
+					return item;
+				}
+			}),
+		);
+		setUploadingVideoCount(0);
 		return uploaded;
 	};
 
@@ -398,6 +455,12 @@ const ProductManagement = () => {
 				setSubmitting(false);
 				return;
 			}
+			const finalVideos = await uploadPendingVideos();
+			if (finalVideos.filter((v) => !v.url).length > 0) {
+				setSubmitError("Some videos failed to upload.");
+				setSubmitting(false);
+				return;
+			}
 			const payload = {
 				...formData,
 				animeTag:
@@ -422,11 +485,8 @@ const ProductManagement = () => {
 						: c
 				),
 				price: parseFloat(formData.price),
-				images: finalImages.map(({ url, publicId, isMain }) => ({
-					url,
-					publicId,
-					isMain,
-				})),
+				images: finalImages.map(({ url, publicId, isMain }) => ({ url, publicId, isMain })),
+				videos: finalVideos.map(({ url, publicId, isPrimary }) => ({ url, publicId, isPrimary })),
 				isActive: formData.isActive,
 				scheduledUploadTime: formData.scheduledUploadTime || null,
 			};
@@ -471,7 +531,15 @@ const ProductManagement = () => {
 			{(submitting || isDeleting) && (
 				<LoadingAnimation
 					variant="overlay"
-					message={submitting ? (uploadingCount > 0 ? `Uploading ${uploadingCount} image(s)...` : "Saving Product...") : "Deleting Product..."}
+					message={
+						submitting
+							? uploadingVideoCount > 0
+								? `Uploading ${uploadingVideoCount} video(s)...`
+								: uploadingCount > 0
+									? `Uploading ${uploadingCount} image(s)...`
+									: "Saving Product..."
+							: "Deleting Product..."
+					}
 					submessage="Please wait"
 				/>
 			)}
@@ -1280,6 +1348,83 @@ const ProductManagement = () => {
 									)}
 								</div>
 
+								{/* ── Product Videos ── */}
+								<div className="space-y-4 pt-4 border-t border-zinc-800">
+									<div className="flex justify-between items-center">
+										<div>
+											<h3 className="text-lg font-bold text-white">Product Videos</h3>
+											<p className="text-xs text-zinc-500 mt-0.5">Optional · Max 3 videos · Up to 200 MB each</p>
+										</div>
+										<span className="text-xs text-zinc-400">{videoItems.length} / 3 added</span>
+									</div>
+
+									{videoItems.length < 3 && (
+										<div
+											onDragEnter={onVideoDragEnter}
+											onDragOver={(e) => e.preventDefault()}
+											onDragLeave={onVideoDragLeave}
+											onDrop={onVideoDrop}
+											onClick={() => videoFileInputRef.current?.click()}
+											className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+												isVideoDragOver
+													? "border-blue-500 bg-blue-500/10"
+													: "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800"
+											}`}
+										>
+											<svg className="mx-auto h-10 w-10 text-zinc-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+											</svg>
+											<p className="text-white font-medium mb-1">Click or drag a video here</p>
+											<p className="text-zinc-500 text-sm">MP4, WebM, MOV — max 200 MB</p>
+											<input
+												ref={videoFileInputRef}
+												type="file"
+												accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska"
+												onChange={onVideoFileChange}
+												className="hidden"
+											/>
+										</div>
+									)}
+
+									{errors.videos && (
+										<p className="text-red-500 text-xs">{errors.videos}</p>
+									)}
+
+									{videoItems.length > 0 && (
+										<div className="space-y-3 mt-2">
+											{videoItems.map((vid, idx) => (
+												<div
+													key={idx}
+													className={`rounded-xl overflow-hidden border-2 ${
+														vid.isPrimary ? "border-blue-500" : "border-zinc-700"
+													}`}
+												>
+													<video
+														src={vid.previewUrl || vid.url}
+														controls
+														preload="metadata"
+														className="w-full max-h-48 object-contain bg-black"
+													/>
+													<div className="flex items-center justify-between px-3 py-2 bg-zinc-900">
+														<div className="flex items-center gap-2">
+															{vid.isPrimary ? (
+																<span className="text-xs text-blue-400 font-semibold">&#9679; Primary Video</span>
+															) : (
+																<button type="button" onClick={() => setPrimaryVideo(idx)} className="text-xs text-zinc-400 hover:text-blue-400 transition-colors">
+																	Set as Primary
+																</button>
+															)}
+															{!vid.url && <span className="text-xs text-yellow-500">⏳ Pending</span>}
+															{vid.url && <span className="text-xs text-green-500">✓ Saved</span>}
+														</div>
+														<button type="button" onClick={() => removeVideo(idx)} className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition-colors">&times;</button>
+													</div>
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+
 								<div className="pt-8">
 									<Button
 										type="submit"
@@ -1287,7 +1432,9 @@ const ProductManagement = () => {
 										className="w-full h-14 text-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 shadow-lg shadow-purple-500/20"
 									>
 										{isWorking
-											? uploadingCount > 0
+											? uploadingVideoCount > 0
+												? `Uploading ${uploadingVideoCount} video(s)...`
+												: uploadingCount > 0
 												? `Uploading ${uploadingCount} image(s)...`
 												: "Saving Product..."
 											: editingId
