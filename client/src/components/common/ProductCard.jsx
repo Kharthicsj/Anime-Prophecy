@@ -3,6 +3,23 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../services/apiClient";
 
+// Currency symbol lookup map
+const CURRENCY_SYMBOLS = {
+	USD: "$", EUR: "€", GBP: "£", JPY: "¥", INR: "₹", KRW: "₩",
+	CNY: "¥", AUD: "A$", CAD: "C$", CHF: "Fr", SEK: "kr", NOK: "kr",
+	DKK: "kr", NZD: "NZ$", SGD: "S$", HKD: "HK$", MXN: "$", BRL: "R$",
+	RUB: "₽", ZAR: "R", TRY: "₺", AED: "د.إ", SAR: "﷼", QAR: "﷼",
+	KWD: "د.ك", BHD: ".د.ب", OMR: "﷼", JOD: "JD", EGP: "£", PKR: "₨",
+	BDT: "৳", LKR: "₨", NPR: "₨", MMK: "K", THB: "฿", VND: "₫",
+	IDR: "Rp", MYR: "RM", PHP: "₱", TWD: "NT$", HUF: "Ft", PLN: "zł",
+	CZK: "Kč", RON: "lei", BGN: "лв", HRK: "kn", ISK: "kr", UAH: "₴",
+	ILS: "₪", NGN: "₦", KES: "KSh", GHS: "₵", TZS: "TSh", UGX: "USh",
+	MAD: "MAD", TND: "DT", KZT: "₸", AZN: "₼", GEL: "₾", AMD: "֏",
+	MNT: "₮", KHR: "៛", LAK: "₭", PEN: "S/.", COP: "$", ARS: "$",
+	CLP: "$", UYU: "$U", BOB: "Bs.", GTQ: "Q", CRC: "₡", PYG: "Gs",
+	TTD: "TT$", JMD: "J$", DOP: "RD$", HNL: "L", NIO: "C$",
+};
+
 /**
  * Product Card Component
  * Displays anime merchandise product with image, title, and CTA.
@@ -10,17 +27,19 @@ import apiClient from "../../services/apiClient";
  */
 const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 	const navigate = useNavigate();
-	
+
 	const mainImage =
 		product.images?.find((img) => img.isMain) || product.images?.[0];
 
 	const handleCardClick = useCallback(() => {
 		// Track click before navigating
-		apiClient.post(`/products/${product._id}/click`).catch(() => {});
-		
+		apiClient.post(`/products/${product._id}/click`).catch(() => { });
+
 		// Navigate to the Product Display Page instead of affiliate link
 		navigate(`/product/${product._id}`);
 	}, [navigate, product._id]);
+
+	const currencySymbol = CURRENCY_SYMBOLS[product.currency] || "";
 
 	return (
 		<div
@@ -103,7 +122,10 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 				{/* Price */}
 				<div className="flex items-center justify-between">
 					<span className="text-lg font-bold text-purple-400">
-						{product.currency} {product.price}
+						{product.currency}{" "}
+						{currencySymbol && (
+							<span className="mr-0.5">{currencySymbol}</span>
+						)}{product.price}
 					</span>
 					{!product.inStock && (
 						<span className="text-red-500 text-xs font-bold">

@@ -83,6 +83,104 @@ const CATEGORY_OPTIONS = [
 	"Clothing", "Electronics", "Posters", "Gadgets", "Figures", "Accessories", "Cosplay", "Other"
 ];
 
+// ─── Currency Searchable Select ───────────────────────────────────────────────
+const CurrencySearchableSelect = ({ currencies, value, onChange, name }) => {
+	const [search, setSearch] = useState("");
+	const [open, setOpen] = useState(false);
+	const wrapperRef = useRef(null);
+	const searchRef = useRef(null);
+
+	useEffect(() => {
+		const handleClickOutside = (e) => {
+			if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+				setOpen(false);
+				setSearch("");
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	useEffect(() => {
+		if (open && searchRef.current) searchRef.current.focus();
+	}, [open]);
+
+	const filtered = currencies.filter(c =>
+		c.code.toLowerCase().includes(search.toLowerCase()) ||
+		c.name.toLowerCase().includes(search.toLowerCase()) ||
+		c.symbol.toLowerCase().includes(search.toLowerCase())
+	);
+
+	const selected = currencies.find(c => c.code === value);
+
+	const handleSelect = (code) => {
+		onChange({ target: { name, value: code } });
+		setOpen(false);
+		setSearch("");
+	};
+
+	return (
+		<div ref={wrapperRef} className="relative">
+			{/* Trigger */}
+			<div
+				className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white cursor-pointer flex justify-between items-center hover:border-zinc-500 focus-within:ring-2 focus-within:ring-purple-500 transition-colors"
+				onClick={() => setOpen(o => !o)}
+				tabIndex={0}
+				onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(o => !o); } }}
+			>
+				{selected ? (
+					<span className="flex items-center gap-2">
+						<span className="text-purple-300 font-bold text-base w-6 text-center">{selected.symbol}</span>
+						<span className="font-semibold">{selected.code}</span>
+						<span className="text-zinc-400 text-xs truncate hidden sm:inline">— {selected.name}</span>
+					</span>
+				) : (
+					<span className="text-zinc-400">Select Currency</span>
+				)}
+				<span className={`text-zinc-400 ml-2 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
+			</div>
+
+			{/* Dropdown */}
+			{open && (
+				<div className="absolute z-[200] w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+					{/* Search */}
+					<div className="p-2 border-b border-zinc-800 bg-zinc-900 sticky top-0">
+						<div className="relative">
+							<svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+							</svg>
+							<input
+								ref={searchRef}
+								type="text"
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								className="w-full pl-8 pr-3 py-1.5 bg-zinc-800 text-white text-sm rounded-lg border border-zinc-700 focus:outline-none focus:border-purple-500 placeholder-zinc-500"
+								placeholder="Search by code, name or symbol…"
+							/>
+						</div>
+					</div>
+					{/* Options list */}
+					<div className="max-h-56 overflow-y-auto">
+						{filtered.length > 0 ? filtered.map(c => (
+							<div
+								key={c.code}
+								className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors text-sm ${value === c.code ? "bg-purple-600/20 text-purple-300" : "hover:bg-zinc-800 text-zinc-200"}`}
+								onClick={() => handleSelect(c.code)}
+							>
+								<span className="text-base w-6 text-center font-bold text-purple-400 flex-shrink-0">{c.symbol}</span>
+								<span className="font-semibold w-12 flex-shrink-0">{c.code}</span>
+								<span className="text-zinc-400 text-xs truncate">{c.name}</span>
+								{value === c.code && <span className="ml-auto text-purple-400 text-xs">✓</span>}
+							</div>
+						)) : (
+							<div className="px-4 py-4 text-sm text-zinc-500 text-center">No currencies found</div>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
 
 const ProductManagement = () => {
 	const navigate = useNavigate();
@@ -181,7 +279,135 @@ const ProductManagement = () => {
 	const storeOptions = STORE_OPTIONS;
 	const categoryOptions = CATEGORY_OPTIONS;
 	const countryOptions = countries.map((c) => c.value);
-	const currencyOptions = ["USD", "JPY", "GBP", "KRW", "INR", "EUR"];
+	// Comprehensive world currency list: { code, symbol, name }
+	const CURRENCY_LIST = [
+		{ code: "USD", symbol: "$",   name: "US Dollar" },
+		{ code: "EUR", symbol: "€",   name: "Euro" },
+		{ code: "GBP", symbol: "£",   name: "British Pound" },
+		{ code: "JPY", symbol: "¥",   name: "Japanese Yen" },
+		{ code: "INR", symbol: "₹",   name: "Indian Rupee" },
+		{ code: "KRW", symbol: "₩",   name: "South Korean Won" },
+		{ code: "CNY", symbol: "¥",   name: "Chinese Yuan" },
+		{ code: "AUD", symbol: "A$",  name: "Australian Dollar" },
+		{ code: "CAD", symbol: "C$",  name: "Canadian Dollar" },
+		{ code: "CHF", symbol: "Fr",  name: "Swiss Franc" },
+		{ code: "SEK", symbol: "kr",  name: "Swedish Krona" },
+		{ code: "NOK", symbol: "kr",  name: "Norwegian Krone" },
+		{ code: "DKK", symbol: "kr",  name: "Danish Krone" },
+		{ code: "NZD", symbol: "NZ$", name: "New Zealand Dollar" },
+		{ code: "SGD", symbol: "S$",  name: "Singapore Dollar" },
+		{ code: "HKD", symbol: "HK$", name: "Hong Kong Dollar" },
+		{ code: "MXN", symbol: "$",   name: "Mexican Peso" },
+		{ code: "BRL", symbol: "R$",  name: "Brazilian Real" },
+		{ code: "RUB", symbol: "₽",   name: "Russian Ruble" },
+		{ code: "ZAR", symbol: "R",   name: "South African Rand" },
+		{ code: "TRY", symbol: "₺",   name: "Turkish Lira" },
+		{ code: "AED", symbol: "د.إ", name: "UAE Dirham" },
+		{ code: "SAR", symbol: "﷼",   name: "Saudi Riyal" },
+		{ code: "QAR", symbol: "﷼",   name: "Qatari Riyal" },
+		{ code: "KWD", symbol: "د.ك", name: "Kuwaiti Dinar" },
+		{ code: "BHD", symbol: ".د.ب",name: "Bahraini Dinar" },
+		{ code: "OMR", symbol: "﷼",   name: "Omani Rial" },
+		{ code: "JOD", symbol: "JD",  name: "Jordanian Dinar" },
+		{ code: "EGP", symbol: "£",   name: "Egyptian Pound" },
+		{ code: "PKR", symbol: "₨",   name: "Pakistani Rupee" },
+		{ code: "BDT", symbol: "৳",   name: "Bangladeshi Taka" },
+		{ code: "LKR", symbol: "₨",   name: "Sri Lankan Rupee" },
+		{ code: "NPR", symbol: "₨",   name: "Nepalese Rupee" },
+		{ code: "MMK", symbol: "K",   name: "Myanmar Kyat" },
+		{ code: "THB", symbol: "฿",   name: "Thai Baht" },
+		{ code: "VND", symbol: "₫",   name: "Vietnamese Dong" },
+		{ code: "IDR", symbol: "Rp",  name: "Indonesian Rupiah" },
+		{ code: "MYR", symbol: "RM",  name: "Malaysian Ringgit" },
+		{ code: "PHP", symbol: "₱",   name: "Philippine Peso" },
+		{ code: "TWD", symbol: "NT$", name: "Taiwan Dollar" },
+		{ code: "HUF", symbol: "Ft",  name: "Hungarian Forint" },
+		{ code: "PLN", symbol: "zł",  name: "Polish Zloty" },
+		{ code: "CZK", symbol: "Kč",  name: "Czech Koruna" },
+		{ code: "RON", symbol: "lei", name: "Romanian Leu" },
+		{ code: "BGN", symbol: "лв",  name: "Bulgarian Lev" },
+		{ code: "HRK", symbol: "kn",  name: "Croatian Kuna" },
+		{ code: "ISK", symbol: "kr",  name: "Icelandic Króna" },
+		{ code: "UAH", symbol: "₴",   name: "Ukrainian Hryvnia" },
+		{ code: "ILS", symbol: "₪",   name: "Israeli Shekel" },
+		{ code: "NGN", symbol: "₦",   name: "Nigerian Naira" },
+		{ code: "KES", symbol: "KSh", name: "Kenyan Shilling" },
+		{ code: "GHS", symbol: "₵",   name: "Ghanaian Cedi" },
+		{ code: "ETB", symbol: "Br",  name: "Ethiopian Birr" },
+		{ code: "TZS", symbol: "TSh", name: "Tanzanian Shilling" },
+		{ code: "UGX", symbol: "USh", name: "Ugandan Shilling" },
+		{ code: "MAD", symbol: "MAD", name: "Moroccan Dirham" },
+		{ code: "TND", symbol: "DT",  name: "Tunisian Dinar" },
+		{ code: "DZD", symbol: "دج",  name: "Algerian Dinar" },
+		{ code: "LYD", symbol: "LD",  name: "Libyan Dinar" },
+		{ code: "XOF", symbol: "CFA", name: "West African CFA Franc" },
+		{ code: "XAF", symbol: "CFA", name: "Central African CFA Franc" },
+		{ code: "MZN", symbol: "MT",  name: "Mozambican Metical" },
+		{ code: "ZMW", symbol: "ZK",  name: "Zambian Kwacha" },
+		{ code: "BWP", symbol: "P",   name: "Botswana Pula" },
+		{ code: "MUR", symbol: "₨",   name: "Mauritian Rupee" },
+		{ code: "SCR", symbol: "₨",   name: "Seychellois Rupee" },
+		{ code: "IQD", symbol: "ع.د", name: "Iraqi Dinar" },
+		{ code: "IRR", symbol: "﷼",   name: "Iranian Rial" },
+		{ code: "LBP", symbol: "£",   name: "Lebanese Pound" },
+		{ code: "SYP", symbol: "£",   name: "Syrian Pound" },
+		{ code: "YER", symbol: "﷼",   name: "Yemeni Rial" },
+		{ code: "AFN", symbol: "؋",   name: "Afghan Afghani" },
+		{ code: "UZS", symbol: "лв",  name: "Uzbekistani Som" },
+		{ code: "KZT", symbol: "₸",   name: "Kazakhstani Tenge" },
+		{ code: "AZN", symbol: "₼",   name: "Azerbaijani Manat" },
+		{ code: "GEL", symbol: "₾",   name: "Georgian Lari" },
+		{ code: "AMD", symbol: "֏",   name: "Armenian Dram" },
+		{ code: "TJS", symbol: "SM",  name: "Tajikistani Somoni" },
+		{ code: "KGS", symbol: "лв",  name: "Kyrgystani Som" },
+		{ code: "TMT", symbol: "T",   name: "Turkmenistani Manat" },
+		{ code: "MNT", symbol: "₮",   name: "Mongolian Tögrög" },
+		{ code: "KHR", symbol: "៛",   name: "Cambodian Riel" },
+		{ code: "LAK", symbol: "₭",   name: "Laotian Kip" },
+		{ code: "BND", symbol: "$",   name: "Brunei Dollar" },
+		{ code: "MOP", symbol: "P",   name: "Macanese Pataca" },
+		{ code: "MVR", symbol: "Rf",  name: "Maldivian Rufiyaa" },
+		{ code: "BTN", symbol: "Nu",  name: "Bhutanese Ngultrum" },
+		{ code: "PGK", symbol: "K",   name: "Papua New Guinean Kina" },
+		{ code: "FJD", symbol: "FJ$", name: "Fijian Dollar" },
+		{ code: "SBD", symbol: "SI$", name: "Solomon Islands Dollar" },
+		{ code: "VUV", symbol: "VT",  name: "Vanuatu Vatu" },
+		{ code: "WST", symbol: "WS$", name: "Samoan Tālā" },
+		{ code: "TOP", symbol: "T$",  name: "Tongan Paʻanga" },
+		{ code: "PEN", symbol: "S/.", name: "Peruvian Sol" },
+		{ code: "COP", symbol: "$",   name: "Colombian Peso" },
+		{ code: "ARS", symbol: "$",   name: "Argentine Peso" },
+		{ code: "CLP", symbol: "$",   name: "Chilean Peso" },
+		{ code: "UYU", symbol: "$U",  name: "Uruguayan Peso" },
+		{ code: "PYG", symbol: "Gs",  name: "Paraguayan Guaraní" },
+		{ code: "BOB", symbol: "Bs.", name: "Bolivian Boliviano" },
+		{ code: "VES", symbol: "Bs.S",name: "Venezuelan Bolívar" },
+		{ code: "GYD", symbol: "$",   name: "Guyanese Dollar" },
+		{ code: "SRD", symbol: "$",   name: "Surinamese Dollar" },
+		{ code: "TTD", symbol: "TT$", name: "Trinidad Dollar" },
+		{ code: "JMD", symbol: "J$",  name: "Jamaican Dollar" },
+		{ code: "BBD", symbol: "Bds$",name: "Barbadian Dollar" },
+		{ code: "HTG", symbol: "G",   name: "Haitian Gourde" },
+		{ code: "CUP", symbol: "₱",   name: "Cuban Peso" },
+		{ code: "DOP", symbol: "RD$", name: "Dominican Peso" },
+		{ code: "GTQ", symbol: "Q",   name: "Guatemalan Quetzal" },
+		{ code: "HNL", symbol: "L",   name: "Honduran Lempira" },
+		{ code: "NIO", symbol: "C$",  name: "Nicaraguan Córdoba" },
+		{ code: "CRC", symbol: "₡",   name: "Costa Rican Colón" },
+		{ code: "PAB", symbol: "B/.", name: "Panamanian Balboa" },
+		{ code: "ALL", symbol: "L",   name: "Albanian Lek" },
+		{ code: "MKD", symbol: "ден", name: "Macedonian Denar" },
+		{ code: "BAM", symbol: "KM",  name: "Bosnia-Herzegovina Mark" },
+		{ code: "RSD", symbol: "din", name: "Serbian Dinar" },
+		{ code: "MDL", symbol: "L",   name: "Moldovan Leu" },
+		{ code: "BYN", symbol: "Br",  name: "Belarusian Ruble" },
+		{ code: "LTL", symbol: "Lt",  name: "Lithuanian Litas" },
+		{ code: "LVL", symbol: "Ls",  name: "Latvian Lats" },
+		{ code: "EEK", symbol: "kr",  name: "Estonian Kroon" },
+	];
+	// Build a lookup map: code → symbol
+	const CURRENCY_SYMBOL_MAP = CURRENCY_LIST.reduce((acc, c) => { acc[c.code] = c.symbol; return acc; }, {});
+	const currencyOptions = CURRENCY_LIST.map(c => c.code);
 
 
 	const fetchProducts = useCallback(async () => {
@@ -1228,18 +1454,22 @@ const ProductManagement = () => {
 											<label className="block text-sm font-medium text-zinc-200 mb-2">
 												Currency
 											</label>
-											<select
+											{/* Show selected symbol preview */}
+											{formData.currency && CURRENCY_SYMBOL_MAP[formData.currency] && (
+												<div className="flex items-center gap-2 mb-2">
+													<span className="inline-flex items-center gap-1.5 bg-purple-600/20 border border-purple-500/40 text-purple-300 text-sm font-bold px-3 py-1 rounded-lg">
+														<span className="text-base">{CURRENCY_SYMBOL_MAP[formData.currency]}</span>
+														<span>{formData.currency}</span>
+													</span>
+													<span className="text-zinc-500 text-xs">{CURRENCY_LIST.find(c => c.code === formData.currency)?.name}</span>
+												</div>
+											)}
+											<CurrencySearchableSelect
 												name="currency"
 												value={formData.currency}
 												onChange={handleInputChange}
-												className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-											>
-												{currencyOptions.map((o) => (
-													<option key={o} value={o}>
-														{o}
-													</option>
-												))}
-											</select>
+												currencies={CURRENCY_LIST}
+											/>
 										</div>
 									</div>
 									<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1563,6 +1793,9 @@ const ProductManagement = () => {
 													)}
 												</div>
 												<span className="text-purple-400 font-bold">
+													{CURRENCY_SYMBOL_MAP[formData.currency] && (
+														<span className="mr-0.5">{CURRENCY_SYMBOL_MAP[formData.currency]}</span>
+													)}
 													{formData.currency}{" "}
 													{formData.price || "0.00"}
 												</span>
