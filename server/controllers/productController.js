@@ -72,7 +72,6 @@ export const getAllProducts = asyncHandler(async (req, res) => {
         filter.$and.push({
             $or: [
                 { title: { $regex: q, $options: 'i' } },
-                { description: { $regex: q, $options: 'i' } },
                 { animeTag: { $regex: q, $options: 'i' } },
             ],
         });
@@ -285,7 +284,6 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
         const q = search.trim();
         filter.$or = [
             { title: { $regex: q, $options: 'i' } },
-            { description: { $regex: q, $options: 'i' } },
             { animeTag: { $regex: q, $options: 'i' } },
         ];
     }

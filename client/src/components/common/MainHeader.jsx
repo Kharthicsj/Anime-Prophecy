@@ -43,7 +43,7 @@ const MainHeader = ({ onSearch, hideSearch = false }) => {
 	};
 
 	return (
-		<header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
+		<header className="sticky top-0 z-[100] border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
 			{/* Desktop Header */}
 			<div className="mx-auto hidden h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 md:flex">
 				{/* Logo */}
