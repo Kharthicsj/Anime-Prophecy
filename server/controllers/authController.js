@@ -123,8 +123,8 @@ export const loginUser = asyncHandler(async (req, res) => {
     const os = parser.getOS().name || 'Unknown OS';
     const deviceType = parser.getDevice().type || 'Desktop';
     const sessionId = crypto.randomUUID();
-    let ipAddress = req.ip || req.connection.remoteAddress;
-    if (ipAddress === '::1' || ipAddress === '::ffff:127.0.0.1') {
+    let ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || 'Unknown IP';
+    if (ipAddress === '::1' || ipAddress === '::ffff:127.0.0.1' || ipAddress === '127.0.0.1') {
         ipAddress = '127.0.0.1 (Localhost)';
     }
 

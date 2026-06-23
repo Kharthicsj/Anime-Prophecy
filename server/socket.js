@@ -56,8 +56,11 @@ export const initSocket = (server) => {
 
         socket.on('disconnect', async () => {
             if (socket.userId && socket.sessionId) {
-                await User.updateOne(
-                    { _id: socket.userId, "sessions.sessionId": socket.sessionId },
+                const result = await User.updateOne(
+                    { 
+                        _id: socket.userId, 
+                        sessions: { $elemMatch: { sessionId: socket.sessionId, socketId: socket.id } } 
+                    },
                     { 
                         $set: { 
                             "sessions.$.isOnline": false, 
@@ -65,7 +68,9 @@ export const initSocket = (server) => {
                         } 
                     }
                 );
-                socket.broadcast.emit('admin_status_change', { userId: socket.userId, sessionId: socket.sessionId, isOnline: false });
+                if (result.modifiedCount > 0) {
+                    socket.broadcast.emit('admin_status_change', { userId: socket.userId, sessionId: socket.sessionId, isOnline: false });
+                }
             }
         });
     });
