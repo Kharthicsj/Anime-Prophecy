@@ -116,69 +116,69 @@ const ProductCarousel = ({
 							aria-hidden
 						/>
 						{(item.title || item.description || item.link || item.productId) && (
-						<div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-14 pt-6 sm:px-8 sm:pb-16 md:px-10">
-							<div className="max-w-xl">
-								{/* Country tags */}
-								<div className="flex flex-wrap gap-2 mb-2">
-									{(() => {
-										if (item.countries && item.countries.length > 0) {
-											const filtered = item.countries.filter(c => 
-												c.toLowerCase() !== 'other' && c.toLowerCase() !== 'worldwide'
-											);
-											if (filtered.length > 0) {
-												return filtered.map((c, idx) => (
-													<span key={idx} className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
-														{c}
-													</span>
-												));
+							<div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-14 pt-6 sm:px-8 sm:pb-16 md:px-10">
+								<div className="max-w-xl">
+									{/* Country tags */}
+									<div className="flex flex-wrap gap-2 mb-2">
+										{(() => {
+											if (item.countries && item.countries.length > 0) {
+												const filtered = item.countries.filter(c =>
+													c.toLowerCase() !== 'other' && c.toLowerCase() !== 'worldwide'
+												);
+												if (filtered.length > 0) {
+													return filtered.map((c, idx) => (
+														<span key={idx} className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
+															{c}
+														</span>
+													));
+												}
 											}
-										}
-										if (item.country) {
-											return (
-												<span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
-													{item.country === "ALL" ? "Worldwide" : item.country}
-												</span>
-											);
-										}
-										return null;
-									})()}
+											if (item.country) {
+												return (
+													<span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-purple-200 shadow-sm">
+														{item.country === "ALL" ? "Worldwide" : item.country}
+													</span>
+												);
+											}
+											return null;
+										})()}
+									</div>
+									{item.title && (
+										<h3 className="mb-2 text-lg font-extrabold leading-snug text-white drop-shadow-md sm:text-2xl">
+											{item.title}
+										</h3>
+									)}
+									{item.description && (
+										<p className="mb-0 line-clamp-3 text-sm leading-relaxed text-zinc-300 drop-shadow sm:text-base">
+											{item.description}
+										</p>
+									)}
+									{/* Product items: navigate to product page; banner items: open link */}
+									{item.productId ? (
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												apiClient.post(`/products/${item.productId}/click`).catch(() => { });
+												navigate(`/product/${item.productId}`);
+											}}
+											className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
+										>
+											Shop Now <FaArrowRight size={12} />
+										</button>
+									) : item.link ? (
+										<a
+											href={item.link}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
+										>
+											Shop Now <FaArrowRight size={12} />
+										</a>
+									) : null}
 								</div>
-								{item.title && (
-									<h3 className="mb-2 text-lg font-extrabold leading-snug text-white drop-shadow-md sm:text-2xl">
-										{item.title}
-									</h3>
-								)}
-								{item.description && (
-									<p className="mb-0 line-clamp-3 text-sm leading-relaxed text-zinc-300 drop-shadow sm:text-base">
-										{item.description}
-									</p>
-								)}
-								{/* Product items: navigate to product page; banner items: open link */}
-								{item.productId ? (
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											apiClient.post(`/products/${item.productId}/click`).catch(() => {});
-											navigate(`/product/${item.productId}`);
-										}}
-										className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
-									>
-										Shop Now <FaArrowRight size={12} />
-									</button>
-								) : item.link ? (
-									<a
-										href={item.link}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:opacity-90"
-									>
-										Shop Now <FaArrowRight size={12} />
-									</a>
-								) : null}
 							</div>
-						</div>
-					)}
+						)}
 					</div>
 				))}
 			</div>

@@ -1112,7 +1112,7 @@ const ProductManagement = () => {
 						// Client-side filter + sort
 						const q = searchQuery.toLowerCase();
 						let filtered = products.filter((p) => {
-							if (q && !p.title?.toLowerCase().includes(q) && !p.animeTag?.toLowerCase().includes(q) && !p.category?.toLowerCase().includes(q) && !p.store?.toLowerCase().includes(q) && !p.description?.toLowerCase().includes(q)) return false;
+							if (q && !p.title?.toLowerCase().includes(q) && !p.animeTag?.toLowerCase().includes(q) && !p.category?.toLowerCase().includes(q) && !p.store?.toLowerCase().includes(q)) return false;
 							if (filterCategory !== "All" && p.category !== filterCategory) return false;
 							if (filterAnime !== "All" && p.animeTag !== filterAnime) return false;
 							if (filterStore !== "All" && p.store !== filterStore) return false;

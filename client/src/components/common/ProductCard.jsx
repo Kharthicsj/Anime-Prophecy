@@ -31,27 +31,25 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 	const mainImage =
 		product.images?.find((img) => img.isMain) || product.images?.[0];
 
-	const handleCardClick = useCallback(() => {
-		// Track click before navigating
+	const handleCardClick = useCallback((e) => {
+		if (e.ctrlKey || e.metaKey || e.button === 1) return;
+		e.preventDefault();
 		apiClient.post(`/products/${product._id}/click`).catch(() => { });
-
-		// Navigate to the Product Display Page instead of affiliate link
 		navigate(`/product/${product._id}`);
 	}, [navigate, product._id]);
 
 	const currencySymbol = CURRENCY_SYMBOLS[product.currency] || "";
 
 	return (
-		<div
+		<a
+			href={`/product/${product._id}`}
 			onClick={handleCardClick}
-			role="link"
 			tabIndex={0}
-			onKeyDown={(e) => e.key === "Enter" && handleCardClick()}
 			className={`
         group cursor-pointer rounded-xl overflow-hidden min-w-0
         bg-zinc-900 border border-zinc-800 hover:border-purple-500
         transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20
-        transform hover:scale-105
+        transform hover:scale-105 block
         ${className}
       `}
 		>
@@ -139,7 +137,7 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 					View Details →
 				</div>
 			</div>
-		</div>
+		</a>
 	);
 };
 
