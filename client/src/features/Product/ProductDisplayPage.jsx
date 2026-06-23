@@ -23,6 +23,9 @@ const ProductDisplayPage = () => {
 	// Unified media carousel index
 	const [mediaIndex, setMediaIndex] = useState(0);
 
+	// Lightbox (enlarged image view)
+	const [lightboxOpen, setLightboxOpen] = useState(false);
+	const [lightboxIndex, setLightboxIndex] = useState(0);
 	// Zoom state (for images only)
 	const [zoomStyle, setZoomStyle] = useState({ display: "none", backgroundImage: "", backgroundPosition: "0% 0%" });
 	const imageRef = useRef(null);
@@ -59,7 +62,9 @@ const ProductDisplayPage = () => {
 		if (!product || loadingRelated || !hasMoreRelated) return;
 		setLoadingRelated(true);
 		try {
-			const productCountry = product.countries?.[0] || 'Worldwide';
+			const productCountry = product.countries?.includes('Worldwide')
+				? 'Worldwide'
+				: (product.countries?.[0] || 'Worldwide');
 			const limit = 15;
 			let query = '';
 			let currentType = type;
@@ -151,6 +156,19 @@ const ProductDisplayPage = () => {
 
 	const handleMouseLeave = () => setZoomStyle({ display: "none" });
 
+	// Keyboard navigation for lightbox
+	useEffect(() => {
+		if (!lightboxOpen) return;
+		const numImages = product?.images?.length || 0;
+		const handler = (e) => {
+			if (e.key === 'ArrowLeft')  setLightboxIndex(i => Math.max(0, i - 1));
+			else if (e.key === 'ArrowRight') setLightboxIndex(i => Math.min(numImages - 1, i + 1));
+			else if (e.key === 'Escape') setLightboxOpen(false);
+		};
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	}, [lightboxOpen, product]);
+
 	const handleBuyNow = async () => {
 		if (product.affiliateLink) {
 			window.open(product.affiliateLink, "_blank", "noopener,noreferrer");
@@ -189,6 +207,18 @@ const ProductDisplayPage = () => {
 
 	const goPrev = () => setMediaIndex(i => (i - 1 + totalMedia) % totalMedia);
 	const goNext = () => setMediaIndex(i => (i + 1) % totalMedia);
+
+	// ── Lightbox helpers (placed here so mediaItems is available) ─────────────────
+	const lightboxImages = mediaItems.filter(m => m.type === 'image');
+	const openLightbox = (idx) => {
+		const imgItems = mediaItems.filter(m => m.type === 'image');
+		const remapped = imgItems.findIndex((_, i) => mediaItems.indexOf(imgItems[i]) === idx);
+		setLightboxIndex(remapped >= 0 ? remapped : 0);
+		setLightboxOpen(true);
+	};
+	const closeLightbox = () => setLightboxOpen(false);
+	const lightboxPrev = () => setLightboxIndex(i => (i - 1 + lightboxImages.length) % lightboxImages.length);
+	const lightboxNext = () => setLightboxIndex(i => (i + 1) % lightboxImages.length);
 
 	return (
 		<div className="min-h-screen bg-[#050505] pb-16 relative overflow-hidden font-sans">
@@ -239,7 +269,9 @@ const ProductDisplayPage = () => {
 											key={currentItem.url}
 											src={currentItem.url}
 											alt={product.title}
-											className="w-full h-auto max-h-[580px] object-contain transition-opacity duration-300"
+											className="w-full h-auto max-h-[580px] min-h-[200px] object-contain object-center transition-opacity duration-300"
+											style={{ cursor: 'zoom-in' }}
+											onClick={() => openLightbox(mediaIndex)}
 										/>
 									)}
 
@@ -261,9 +293,9 @@ const ProductDisplayPage = () => {
 									{totalMedia > 1 && (
 										<button
 											onClick={goPrev}
-											className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-black/55 border border-white/10 backdrop-blur-sm text-white hover:bg-black/80 hover:scale-110 transition-all shadow-lg"
+											className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 hover:scale-110 transition-all shadow-xl"
 										>
-											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
 										</button>
 									)}
 
@@ -271,9 +303,9 @@ const ProductDisplayPage = () => {
 									{totalMedia > 1 && (
 										<button
 											onClick={goNext}
-											className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-black/55 border border-white/10 backdrop-blur-sm text-white hover:bg-black/80 hover:scale-110 transition-all shadow-lg"
+											className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 hover:scale-110 transition-all shadow-xl"
 										>
-											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
 										</button>
 									)}
 
@@ -361,6 +393,24 @@ const ProductDisplayPage = () => {
 									}}
 								/>
 							)}
+
+							{/* ── Affiliate Disclaimer ── */}
+							<div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm overflow-hidden">
+								<div className="flex gap-3 p-4">
+									<div className="flex-shrink-0 w-1 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 self-stretch" />
+									<div className="flex flex-col gap-1.5 min-w-0">
+										<div className="flex items-center gap-2">
+											<svg className="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Affiliate Disclosure</span>
+										</div>
+										<p className="text-zinc-400 text-[11.5px] leading-relaxed capitalize">
+											⚠️ We may earn a commission from affiliate links at no extra cost to you. Product availability, prices, discounts, and promotions can change without notice. Broken links, sold-out items, or region restrictions may occur. Please explore other products on the retailer&apos;s website if the featured item is unavailable.
+										</p>
+									</div>
+								</div>
+							</div>
 						</div>
 
 						{/* Right: Product Details */}
@@ -426,23 +476,6 @@ const ProductDisplayPage = () => {
 									{product.description || "Explore this premium anime merchandise. High quality materials and accurate designs make this a perfect addition to your collection."}
 								</p>
 							</div>
-							{/* ── Affiliate Disclaimer ── */}
-							<div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm overflow-hidden">
-								<div className="flex gap-3 p-4">
-									<div className="flex-shrink-0 w-1 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 self-stretch" />
-									<div className="flex flex-col gap-1.5 min-w-0">
-										<div className="flex items-center gap-2">
-											<svg className="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											<span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Affiliate Disclosure</span>
-										</div>
-										<p className="text-zinc-400 text-[11.5px] leading-relaxed">
-											⚠️ We may earn a commission from affiliate links at no extra cost to you. Product availability, prices, discounts, and promotions can change without notice. Broken links, sold-out items, or region restrictions may occur. Please explore other products on the retailer&apos;s website if the featured item is unavailable.
-										</p>
-									</div>
-								</div>
-							</div>
 						</div>
 					</div>
 				</div>
@@ -470,6 +503,205 @@ const ProductDisplayPage = () => {
 					</div>
 				)}
 			</div>
+
+			{/* ══════════ LIGHTBOX OVERLAY ══════════ */}
+			{lightboxOpen && lightboxImages.length > 0 && (
+				<div
+				style={{
+					position: 'fixed',
+					inset: 0,
+					zIndex: 9999,
+					background: 'rgba(0,0,0,0.94)',
+					backdropFilter: 'blur(8px)',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					animation: 'fadeInLightbox 0.2s ease',
+				}}
+				onClick={closeLightbox}
+			>
+				<style>{`
+					@keyframes fadeInLightbox { from { opacity: 0; } to { opacity: 1; } }
+					@keyframes slideInImg { from { transform: scale(0.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+				`}</style>
+
+				{/* Close button */}
+				<button
+					onClick={closeLightbox}
+					style={{
+						position: 'absolute',
+						top: '1.25rem',
+						right: '1.25rem',
+						width: '2.5rem',
+						height: '2.5rem',
+						borderRadius: '50%',
+						border: '1px solid rgba(255,255,255,0.15)',
+						background: 'rgba(0,0,0,0.6)',
+						color: '#fff',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						cursor: 'pointer',
+						fontSize: '1.2rem',
+						zIndex: 10001,
+						backdropFilter: 'blur(4px)',
+						transition: 'background 0.2s',
+					}}
+					onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.7)'}
+					onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+				>
+					✕
+				</button>
+
+				{/* Image counter */}
+				<div
+					style={{
+						position: 'absolute',
+						top: '1.25rem',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						background: 'rgba(0,0,0,0.55)',
+						border: '1px solid rgba(255,255,255,0.1)',
+						borderRadius: '999px',
+						padding: '0.3rem 1rem',
+						color: '#e4e4e7',
+						fontSize: '0.8rem',
+						fontWeight: 600,
+						backdropFilter: 'blur(4px)',
+						zIndex: 10001,
+						letterSpacing: '0.05em',
+					}}
+				>
+					{lightboxIndex + 1} / {lightboxImages.length}
+				</div>
+
+				{/* Left arrow */}
+				{lightboxImages.length > 1 && (
+					<button
+						onClick={e => { e.stopPropagation(); lightboxPrev(); }}
+						style={{
+							position: 'absolute',
+							left: '1.25rem',
+							top: '50%',
+							transform: 'translateY(-50%)',
+							width: '3.5rem',
+							height: '3.5rem',
+							borderRadius: '50%',
+							border: 'none',
+							background: '#fff',
+							color: '#000',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							cursor: 'pointer',
+							zIndex: 10001,
+							transition: 'all 0.2s',
+							boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+						}}
+						onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+						onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+					>
+						<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+						</svg>
+					</button>
+				)}
+
+				{/* Right arrow */}
+				{lightboxImages.length > 1 && (
+					<button
+						onClick={e => { e.stopPropagation(); lightboxNext(); }}
+						style={{
+							position: 'absolute',
+							right: '1.25rem',
+							top: '50%',
+							transform: 'translateY(-50%)',
+							width: '3.5rem',
+							height: '3.5rem',
+							borderRadius: '50%',
+							border: 'none',
+							background: '#fff',
+							color: '#000',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							cursor: 'pointer',
+							zIndex: 10001,
+							transition: 'all 0.2s',
+							boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+						}}
+						onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+						onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+					>
+						<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+						</svg>
+					</button>
+				)}
+
+				{/* Main enlarged image */}
+				<div
+					onClick={e => e.stopPropagation()}
+					style={{
+						maxWidth: 'min(90vw, 960px)',
+						maxHeight: '85vh',
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						gap: '1rem',
+					}}
+				>
+					<img
+						key={lightboxIndex}
+						src={lightboxImages[lightboxIndex]?.url}
+						alt={`${product.title} — image ${lightboxIndex + 1}`}
+						style={{
+							maxWidth: '100%',
+							maxHeight: '78vh',
+							objectFit: 'contain',
+							borderRadius: '12px',
+							boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
+							animation: 'slideInImg 0.22s ease',
+							userSelect: 'none',
+						}}
+					/>
+
+					{/* Thumbnail strip inside lightbox */}
+					{lightboxImages.length > 1 && (
+						<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+							{lightboxImages.map((img, i) => (
+								<button
+									key={i}
+									onClick={() => setLightboxIndex(i)}
+									style={{
+										width: '52px',
+										height: '52px',
+										borderRadius: '8px',
+										overflow: 'hidden',
+										border: i === lightboxIndex ? '2px solid #a855f7' : '2px solid rgba(255,255,255,0.1)',
+										opacity: i === lightboxIndex ? 1 : 0.55,
+										cursor: 'pointer',
+										padding: 0,
+										background: 'none',
+										transition: 'all 0.18s',
+										flexShrink: 0,
+									}}
+									onMouseEnter={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.85'; }}
+									onMouseLeave={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.55'; }}
+								>
+									<img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+								</button>
+							))}
+						</div>
+					)}
+
+					{/* Keyboard hint */}
+					<p style={{ color: '#52525b', fontSize: '0.72rem', margin: 0, textAlign: 'center' }}>
+						← → to navigate &nbsp;·&nbsp; Esc to close &nbsp;·&nbsp; Click outside to dismiss
+					</p>
+				</div>
+			</div>
+		)}
 		</div>
 	);
 };

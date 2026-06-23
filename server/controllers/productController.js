@@ -21,20 +21,34 @@ export const getAllProducts = asyncHandler(async (req, res) => {
         limit = 12,
     } = req.query;
 
-    const filter = { 
+    const filter = {
         isActive: true,
-        $or: [
-            { scheduledUploadTime: null },
-            { scheduledUploadTime: { $lte: new Date() } }
-        ]
+        $and: [
+            {
+                $or: [
+                    { scheduledUploadTime: null },
+                    { scheduledUploadTime: { $lte: new Date() } },
+                ],
+            },
+        ],
     };
 
     if (country === 'Worldwide') {
         if (regionCountry && regionCountry !== 'All Countries') {
-            filter.countries = regionCountry;
+            filter.$and.push({
+                $or: [
+                    { countries: regionCountry },
+                    { countries: 'Worldwide' },
+                ],
+            });
         }
     } else {
-        filter.countries = country;
+        filter.$and.push({
+            $or: [
+                { countries: country },
+                { countries: 'Worldwide' },
+            ],
+        });
     }
 
     if (animeTag && animeTag !== 'All Anime') {
@@ -55,11 +69,13 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
     if (search?.trim()) {
         const q = search.trim();
-        filter.$or = [
-            { title: { $regex: q, $options: 'i' } },
-            { description: { $regex: q, $options: 'i' } },
-            { animeTag: { $regex: q, $options: 'i' } },
-        ];
+        filter.$and.push({
+            $or: [
+                { title: { $regex: q, $options: 'i' } },
+                { description: { $regex: q, $options: 'i' } },
+                { animeTag: { $regex: q, $options: 'i' } },
+            ],
+        });
     }
 
     // Calculate pagination
@@ -424,6 +440,48 @@ export const deleteProduct = asyncHandler(async (req, res) => {
         success: true,
         message: 'Product deleted successfully',
     });
+});
+
+/**
+ * Get distinct metadata values (animeTag, category, store, subCategory, countries) from active products
+ * @route GET /api/products/meta/filters
+ * @access Public
+ */
+export const getDistinctMeta = asyncHandler(async (req, res) => {
+    const { category } = req.query;
+    const subCategoryFilter = { isActive: true };
+    if (category && category !== 'All Categories') {
+        subCategoryFilter.category = category;
+    }
+
+    const [animeTags, categories, stores, subCategories, countries] = await Promise.all([
+        Product.distinct('animeTag', { isActive: true }),
+        Product.distinct('category', { isActive: true }),
+        Product.distinct('store', { isActive: true }),
+        Product.distinct('subCategory', subCategoryFilter),
+        Product.distinct('countries', { isActive: true }),
+    ]);
+    res.json({
+        success: true,
+        data: {
+            animeTags: animeTags.filter(Boolean).sort(),
+            categories: categories.filter(Boolean).sort(),
+            stores: stores.filter(Boolean).sort(),
+            subCategories: subCategories.filter(Boolean).sort(),
+            countries: countries.filter(Boolean).sort(),
+        },
+    });
+});
+
+/**
+ * Get distinct country values stored in active products
+ * @route GET /api/products/meta/countries
+ * @access Public
+ */
+export const getDistinctCountries = asyncHandler(async (req, res) => {
+    const countries = await Product.distinct('countries', { isActive: true });
+    const sorted = [...countries].sort();
+    res.json({ success: true, data: { countries: sorted } });
 });
 
 /**

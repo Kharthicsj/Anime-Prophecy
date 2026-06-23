@@ -29,7 +29,7 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 			tabIndex={0}
 			onKeyDown={(e) => e.key === "Enter" && handleCardClick()}
 			className={`
-        group cursor-pointer rounded-xl overflow-hidden
+        group cursor-pointer rounded-xl overflow-hidden min-w-0
         bg-zinc-900 border border-zinc-800 hover:border-purple-500
         transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20
         transform hover:scale-105
@@ -37,11 +37,12 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
       `}
 		>
 			{/* Image Container */}
-			<div className="relative overflow-hidden bg-zinc-800 aspect-square">
+			<div className="relative overflow-hidden bg-zinc-800 aspect-square w-full">
 				<img
 					src={mainImage?.url || "placeholder.jpg"}
 					alt={product.title}
-					className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+					className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
+					loading="lazy"
 				/>
 
 				{/* Badges Container */}

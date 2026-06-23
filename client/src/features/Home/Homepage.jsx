@@ -17,6 +17,7 @@ import {
 	getCountryISOCode,
 	countries,
 } from "../../utils/countries";
+import { sortToApiParam } from "../../constants/productFilters";
 import {
 	FaStar,
 	FaFire,
@@ -125,7 +126,7 @@ const Homepage = () => {
 					country: activeCountryValue,
 					page,
 					limit: PAGE_SIZE,
-					...(filters.sort && { sort: filters.sort }),
+					sort: sortToApiParam(filters.sort || "newest"),
 					...(filters.search && { search: filters.search }),
 					...(filters.animeTag &&
 						filters.animeTag !== "All Anime" && {
@@ -407,6 +408,8 @@ const Homepage = () => {
 					borderBottom: "1px solid #1c1c1f",
 					background: "rgba(0,0,0,0.12)",
 					padding: "1.25rem 0",
+					position: "relative",
+					zIndex: 50,
 				}}
 			>
 				<div

@@ -11,6 +11,8 @@ import {
     updateGlobalSettings,
     trackProductClick,
     trackProductBuyNowClick,
+    getDistinctCountries,
+    getDistinctMeta,
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -36,6 +38,20 @@ router.get('/analytics/stats', verifyToken, isAdmin, getProductAnalytics);
  * @access Public
  */
 router.get('/', getAllProducts);
+
+/**
+ * @route GET /api/products/meta/filters
+ * @desc Get all distinct filter values (anime, category, store, subCategory, countries) from active products
+ * @access Public
+ */
+router.get('/meta/filters', getDistinctMeta);
+
+/**
+ * @route GET /api/products/meta/countries
+ * @desc Get all distinct country values from active products
+ * @access Public
+ */
+router.get('/meta/countries', getDistinctCountries);
 
 /**
  * @route GET /api/products/:id

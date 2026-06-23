@@ -9,6 +9,7 @@ import apiClient from "../../services/apiClient";
 import { BoxIcon, UploadIcon } from "../../components/common/Icons";
 import { countries } from "../../utils/countries";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
+import { SearchableDropdown } from "../../components/common/FilterPanel";
 
 // ─── Utility to convert to Camel Case (Title Case for UI) ───────────
 const toTitleCase = (str) => {
@@ -90,6 +91,31 @@ const ProductManagement = () => {
 	const [customCountryInput, setCustomCountryInput] = useState("");
 	const [isDeleting, setIsDeleting] = useState(false);
 
+	const [dynamicOptions, setDynamicOptions] = useState({
+		animeTags: [],
+		categories: [],
+		stores: [],
+		countries: [],
+	});
+
+	useEffect(() => {
+		const fetchMeta = async () => {
+			try {
+				const res = await apiClient.get("/products/meta/filters");
+				const d = res.data?.data || {};
+				setDynamicOptions({
+					animeTags: d.animeTags || [],
+					categories: d.categories || [],
+					stores: d.stores || [],
+					countries: d.countries || [],
+				});
+			} catch {
+				// silently fallback
+			}
+		};
+		fetchMeta();
+	}, []);
+
 	// Subcategory map: which categories have subcategories and what they are
 	const subCategoryMap = {
 		"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets"],
@@ -123,27 +149,30 @@ const ProductManagement = () => {
 		}
 	}, []);
 
-	// Compute unique anime tags from loaded products (includes custom "Other" tags)
-	const uniqueAnimeTags = useMemo(() => {
-		const baseSet = new Set(animeOptions);
-		products.forEach((p) => {
-			if (p.animeTag) baseSet.add(p.animeTag);
-		});
-		// Remove the raw "Other" if we have real tag names
-		const allTags = [...baseSet];
-		const hasCustom = allTags.some((t) => t !== "Other" && !animeOptions.slice(0, -1).includes(t));
-		if (hasCustom) baseSet.delete("Other");
-		return [...baseSet];
-	}, [products, animeOptions]);
+	const mergeUnique = (staticArr, dynamicArr) => {
+		const set = new Set([...staticArr, ...dynamicArr]);
+		return [...set];
+	};
 
-	// Compute unique store names from loaded products
-	const uniqueStores = useMemo(() => {
-		const baseSet = new Set(storeOptions);
-		products.forEach((p) => {
-			if (p.store) baseSet.add(p.store);
-		});
-		return [...baseSet];
-	}, [products, storeOptions]);
+	const finalAnimeOptions = [
+		{ value: "All", label: "All Anime" },
+		...mergeUnique(animeOptions, dynamicOptions.animeTags).filter(v => v !== "Other").map(o => ({ value: o, label: o }))
+	];
+
+	const finalCategoryOptions = [
+		{ value: "All", label: "All Categories" },
+		...mergeUnique(categoryOptions, dynamicOptions.categories).filter(v => v !== "Other").map(o => ({ value: o, label: o }))
+	];
+
+	const finalStoreOptions = [
+		{ value: "All", label: "All Stores" },
+		...mergeUnique(storeOptions, dynamicOptions.stores).filter(v => v !== "Other").map(o => ({ value: o, label: o }))
+	];
+
+	const finalCountryOptions = [
+		{ value: "All", label: "All Countries" },
+		...mergeUnique(countryOptions, dynamicOptions.countries).filter(v => v !== "Other").map(o => ({ value: o, label: o }))
+	];
 
 	useEffect(() => {
 		if (user && viewMode === "list") {
@@ -394,7 +423,11 @@ const ProductManagement = () => {
 				? p.countries.filter((c) => c !== country)
 				: [...p.countries, country],
 		}));
+		setErrors((prev) => ({ ...prev, countries: "" }));
 	};
+
+	const getCustomCountries = () =>
+		formData.countries.filter((c) => c !== "Other" && !countryOptions.includes(c));
 
 	const validateForm = () => {
 		const e = {};
@@ -419,7 +452,7 @@ const ProductManagement = () => {
 		setSuccessMessage("");
 		if (!validateForm()) return;
 
-		const eValid = { ...errors };
+		const eValid = {};
 		let hasErr = false;
 		if (formData.animeTag === "Other" && !customAnimeTag.trim()) {
 			eValid.animeTag = "Please specify the anime name";
@@ -437,7 +470,12 @@ const ProductManagement = () => {
 			eValid.store = "Please specify the store";
 			hasErr = true;
 		}
-		if (formData.countries.includes("Other") && !customCountryInput.trim()) {
+		const customCountries = getCustomCountries();
+		if (
+			formData.countries.includes("Other") &&
+			customCountries.length === 0 &&
+			!customCountryInput.trim()
+		) {
 			eValid.countries = "Please specify the custom country";
 			hasErr = true;
 		}
@@ -479,11 +517,7 @@ const ProductManagement = () => {
 					formData.store === "Other"
 						? toTitleCase(customStore.trim())
 						: formData.store,
-				countries: formData.countries.map(c => 
-					c === "Other" && customCountryInput.trim() 
-						? toTitleCase(customCountryInput.trim()) 
-						: c
-				),
+				countries: formData.countries.filter((c) => c !== "Other"),
 				price: parseFloat(formData.price),
 				images: finalImages.map(({ url, publicId, isMain }) => ({ url, publicId, isMain })),
 				videos: finalVideos.map(({ url, publicId, isPrimary }) => ({ url, publicId, isPrimary })),
@@ -691,63 +725,62 @@ const ProductManagement = () => {
 							</div>
 
 							{/* ── Filters Row ── */}
-							<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-								{/* Sort */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Sort By</label>
-									<select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="-createdAt">Newest First</option>
-										<option value="createdAt">Oldest First</option>
-										<option value="-views">Most Views</option>
-										<option value="-clicks">Most Card Clicks</option>
-										<option value="-buyNowClicks">Most Buy Now Clicks</option>
-										<option value="price">Price ↑</option>
-										<option value="-price">Price ↓</option>
-										<option value="title">Title A–Z</option>
-									</select>
-								</div>
-								{/* Category */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Category</label>
-									<select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="All">All Categories</option>
-										{categoryOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-									</select>
-								</div>
-								{/* Anime */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Anime</label>
-									<select value={filterAnime} onChange={(e) => setFilterAnime(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="All">All Anime</option>
-										{uniqueAnimeTags.map((o) => <option key={o} value={o}>{o}</option>)}
-									</select>
-								</div>
-								{/* Store */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Store</label>
-									<select value={filterStore} onChange={(e) => setFilterStore(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="All">All Stores</option>
-										{uniqueStores.map((o) => <option key={o} value={o}>{o}</option>)}
-									</select>
-								</div>
-								{/* Country */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Country</label>
-									<select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="All">All Countries</option>
-										{countryOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-									</select>
-								</div>
-								{/* Status */}
-								<div>
-									<label className="block text-xs text-zinc-500 mb-1">Status</label>
-									<select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
-										<option value="All">All Statuses</option>
-										<option value="Active">Active</option>
-										<option value="Inactive">Inactive (Private)</option>
-										<option value="Scheduled">Scheduled</option>
-									</select>
-								</div>
+							<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+								<SearchableDropdown
+									label="Sort By"
+									value={sortBy}
+									onChange={(v) => setSortBy(v)}
+									options={[
+										{ value: "-createdAt", label: "Newest First" },
+										{ value: "createdAt", label: "Oldest First" },
+										{ value: "-views", label: "Most Views" },
+										{ value: "-clicks", label: "Most Card Clicks" },
+										{ value: "-buyNowClicks", label: "Most Buy Now Clicks" },
+										{ value: "price", label: "Price ↑" },
+										{ value: "-price", label: "Price ↓" },
+										{ value: "title", label: "Title A–Z" }
+									]}
+								/>
+
+								<SearchableDropdown
+									label="Category"
+									value={filterCategory}
+									onChange={(v) => setFilterCategory(v)}
+									options={finalCategoryOptions}
+								/>
+
+								<SearchableDropdown
+									label="Anime"
+									value={filterAnime}
+									onChange={(v) => setFilterAnime(v)}
+									options={finalAnimeOptions}
+								/>
+
+								<SearchableDropdown
+									label="Store"
+									value={filterStore}
+									onChange={(v) => setFilterStore(v)}
+									options={finalStoreOptions}
+								/>
+
+								<SearchableDropdown
+									label="Country"
+									value={filterCountry}
+									onChange={(v) => setFilterCountry(v)}
+									options={finalCountryOptions}
+								/>
+
+								<SearchableDropdown
+									label="Status"
+									value={filterStatus}
+									onChange={(v) => setFilterStatus(v)}
+									options={[
+										{ value: "All", label: "All Statuses" },
+										{ value: "Active", label: "Active" },
+										{ value: "Inactive", label: "Inactive (Private)" },
+										{ value: "Scheduled", label: "Scheduled" }
+									]}
+								/>
 							</div>
 
 							{/* Active filter chips */}
@@ -974,8 +1007,10 @@ const ProductManagement = () => {
 										value={formData.title}
 										onChange={handleInputChange}
 										error={errors.title}
+										maxLength={300}
 										required
 									/>
+									<p className="text-xs text-right -mt-3" style={{ color: formData.title.length > 270 ? '#f87171' : '#71717a' }}>{formData.title.length}/300</p>
 									<div>
 										<label className="block text-sm font-medium text-zinc-200 mb-2">
 											Description
@@ -986,13 +1021,15 @@ const ProductManagement = () => {
 											value={formData.description}
 											onChange={handleInputChange}
 											rows="4"
+											maxLength={2000}
 											className={`w-full px-4 py-2.5 rounded-lg bg-zinc-800 border text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.description ? "border-red-500" : "border-zinc-700"}`}
 										/>
-										{errors.description && (
-											<p className="text-red-500 text-xs mt-1">
-												{errors.description}
-											</p>
-										)}
+										<div className="flex justify-between items-start mt-1">
+											{errors.description ? (
+												<p className="text-red-500 text-xs">{errors.description}</p>
+											) : <span />}
+											<p className="text-xs ml-auto" style={{ color: formData.description.length > 1900 ? '#f87171' : '#71717a' }}>{formData.description.length}/2000</p>
+										</div>
 									</div>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
@@ -1225,7 +1262,7 @@ const ProductManagement = () => {
 										<div className="mt-3">
 											<label className="block text-sm font-medium text-zinc-200 mb-2">Custom Countries (Press Enter to add)</label>
 											<div className="flex flex-wrap gap-2 mb-2">
-												{formData.countries.filter(c => c !== "Other" && !countryOptions.includes(c)).map(tag => (
+												{getCustomCountries().map(tag => (
 													<span key={tag} className="bg-purple-600/30 border border-purple-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
 														{tag}
 														<button type="button" onClick={() => handleCountryToggle(tag)} className="text-purple-300 hover:text-white">&times;</button>
@@ -1235,7 +1272,12 @@ const ProductManagement = () => {
 											<Input
 												placeholder="Type a country and press Enter"
 												value={customCountryInput}
-												onChange={(e) => setCustomCountryInput(e.target.value)}
+												onChange={(e) => {
+													setCustomCountryInput(e.target.value);
+													if (errors.countries) {
+														setErrors((prev) => ({ ...prev, countries: "" }));
+													}
+												}}
 												onKeyDown={(e) => {
 													if (e.key === "Enter") {
 														e.preventDefault();
@@ -1244,9 +1286,15 @@ const ProductManagement = () => {
 															setFormData(p => ({ ...p, countries: [...p.countries, val] }));
 														}
 														setCustomCountryInput("");
+														setErrors((prev) => ({ ...prev, countries: "" }));
 													}
 												}}
 											/>
+											{getCustomCountries().length > 0 && !customCountryInput.trim() && (
+												<p className="mt-1 text-xs text-violet-400 flex items-center gap-1">
+													<span>✓</span> {getCustomCountries().length} custom {getCustomCountries().length === 1 ? "country" : "countries"} added
+												</p>
+											)}
 										</div>
 									)}
 									{errors.countries && (
