@@ -446,7 +446,7 @@ const Homepage = () => {
 					background: "rgba(0,0,0,0.12)",
 					padding: "1.25rem 0",
 					position: "relative",
-					zIndex: 50,
+					zIndex: 40,
 				}}
 			>
 				<div
@@ -465,7 +465,7 @@ const Homepage = () => {
 			</section>
 
 			{/* ══════════ 5. PRODUCTS GRID + INFINITE SCROLL ══════════ */}
-			<section ref={catalogRef} style={{ padding: "2.5rem 0 5rem" }}>
+			<section ref={catalogRef} style={{ padding: "2.5rem 0 5rem", position: "relative", zIndex: 10 }}>
 				<div
 					style={{
 						maxWidth: "1280px",
