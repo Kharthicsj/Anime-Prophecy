@@ -38,12 +38,22 @@ export const LEGAL_PAGES = {
 		title: "Affiliate Disclosure",
 		sections: [
 			{
-				heading: "Affiliate relationships",
-				body: "Prophecy Hub participates in affiliate programs. Some links on this site are affiliate links, which means we may earn a commission if you click through and make a purchase, at no extra cost to you.",
-			},
-			{
-				heading: "Editorial independence",
-				body: "Curated and trending selections are chosen by our team. Affiliate partnerships do not determine which products we feature in admin-managed trending or carousel sections.",
+				heading: "⚠️ Affiliate Disclosure & Product Availability Notice",
+				body: `Some Links On This Website May Be Affiliate Links, Which Means We May Earn A Commission At No Additional Cost To You If You Make A Purchase Through Them. This Helps Support Anime Prophecy And Allows Us To Continue Providing Anime Recommendations, Merchandise Finds, News, Guides, And Content For Fans Worldwide.
+
+Product Prices, Discounts, Availability, Release Dates, Pre-Order Bonuses, Promotions, And Product Details May Change At Any Time Without Notice. Some Products May Be Out Of Stock, Discontinued, Region-Restricted, Unavailable In Your Country, Or Linked Pages May No Longer Work Due To Retailer Updates.
+
+If A Recommended Item Is Unavailable, Please Check The Retailer's Website For Similar Products, Alternative Editions, Newer Releases, Or Related Merchandise. Availability May Vary Between Japan, The United States, The United Kingdom, India, South Korea, And Other Regions.
+
+We Aim To Recommend Authentic And Reputable Products Whenever Possible, But We Cannot Guarantee Product Quality, Seller Performance, Shipping Times, Stock Levels, Pricing Accuracy, Or The Availability Of Limited-Edition Items. Always Review Product Details, Seller Ratings, Customer Reviews, Shipping Information, Return Policies, And Any Applicable Customs Fees Before Making A Purchase.
+
+This Website May Feature Both Physical And Digital Products, Including Anime Figures, Manga, Light Novels, Blu-Rays, Collectibles, Apparel, Accessories, Games, Subscriptions, Digital Content, And Other Anime-Related Merchandise.
+
+All Recommendations, Ratings, Opinions, And Featured Products Are Provided For Informational Purposes Only And Should Not Be Considered Professional Purchasing Advice. Final Purchasing Decisions Remain The Responsibility Of The Buyer.
+
+By Using This Website And Its Affiliate Links, You Acknowledge And Accept That Product Information May Change Without Notice And That Anime Prophecy Is Not Responsible For Retailer Actions, Stock Shortages, Pricing Changes, Shipping Issues, Product Defects, Or Third-Party Website Content.
+
+Thank You For Supporting Anime Prophecy And Helping Us Continue Bringing Anime Fans The Best Merchandise, Deals, And Recommendations.`,
 			},
 		],
 	},

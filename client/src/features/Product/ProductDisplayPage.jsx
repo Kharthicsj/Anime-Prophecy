@@ -426,6 +426,23 @@ const ProductDisplayPage = () => {
 									{product.description || "Explore this premium anime merchandise. High quality materials and accurate designs make this a perfect addition to your collection."}
 								</p>
 							</div>
+							{/* ── Affiliate Disclaimer ── */}
+							<div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm overflow-hidden">
+								<div className="flex gap-3 p-4">
+									<div className="flex-shrink-0 w-1 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 self-stretch" />
+									<div className="flex flex-col gap-1.5 min-w-0">
+										<div className="flex items-center gap-2">
+											<svg className="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Affiliate Disclosure</span>
+										</div>
+										<p className="text-zinc-400 text-[11.5px] leading-relaxed">
+											⚠️ We may earn a commission from affiliate links at no extra cost to you. Product availability, prices, discounts, and promotions can change without notice. Broken links, sold-out items, or region restrictions may occur. Please explore other products on the retailer&apos;s website if the featured item is unavailable.
+										</p>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
