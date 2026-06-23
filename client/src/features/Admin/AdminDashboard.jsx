@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import apiClient from "../../services/apiClient";
 import NewsletterPanel from "./NewsletterPanel";
+import SecurityPanel from "./SecurityPanel";
+import SuggestionManagement from "./SuggestionManagement";
 
 /* ─── Icons (inline SVG) ─── */
 const Icon = ({ d, size = 20 }) => (
@@ -40,6 +42,8 @@ const IcLogout = () => (
 );
 const IcArrow = () => <Icon d="M5 12h14M12 5l7 7-7 7" />;
 const IcLandscape = () => <Icon d="M3 9l4-4 4 4 4-6 6 6H3zM3 21h18v-6H3v6z" />;
+const IcShield = () => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
+const IcLightbulb = () => <Icon d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5 M9 18h6 M10 22h4" />;
 
 const NAV_ITEMS = [
 	{ id: "overview", label: "Overview", Icon: IcChart },
@@ -48,7 +52,9 @@ const NAV_ITEMS = [
 	{ id: "carousels", label: "Carousels", Icon: IcSlides },
 	{ id: "trending", label: "Trending Products", Icon: IcTrending },
 	{ id: "landingImage", label: "Landing Image", Icon: IcLandscape },
+	{ id: "suggestions", label: "Suggestions", Icon: IcLightbulb },
 	{ id: "newsletters", label: "Newsletters", Icon: IcCog },
+	{ id: "security", label: "Security", Icon: IcShield },
 ];
 
 /* ─── Stat card ─── */
@@ -803,6 +809,14 @@ const AdminDashboard = () => {
 										}
 										Icon={IcTrending}
 									/>
+									<ActionCard
+										label="Product Suggestions"
+										desc="Manage and review user product suggestions"
+										onClick={() =>
+											setActiveTab("suggestions")
+										}
+										Icon={IcLightbulb}
+									/>
 								</div>
 							</div>
 
@@ -989,8 +1003,14 @@ const AdminDashboard = () => {
 					{/* ── Landing Image Tab ── */}
 					{activeTab === "landingImage" && <LandingImagePanel />}
 
+					{/* ── Suggestions Tab ── */}
+					{activeTab === "suggestions" && <SuggestionManagement />}
+
 					{/* ── Newsletters Tab ── */}
 					{activeTab === "newsletters" && <NewsletterPanel />}
+
+					{/* ── Security Tab ── */}
+					{activeTab === "security" && <SecurityPanel />}
 				</main>
 			</div>
 		</div>

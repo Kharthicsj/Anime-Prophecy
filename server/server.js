@@ -17,6 +17,7 @@ import carouselRoutes from './routes/carouselRoutes.js';
 import newsletterRoutes from './routes/newsletterRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import trendingRoutes from './routes/trendingRoutes.js';
+import productSuggestionRoutes from './routes/productSuggestionRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -106,6 +107,7 @@ const routeMounts = [
     ['/api/newsletter', '/newsletter', newsletterRoutes],
     ['/api/settings', '/settings', settingsRoutes],
     ['/api/trending', '/trending', trendingRoutes],
+    ['/api/suggestions', '/suggestions', productSuggestionRoutes],
 ];
 
 for (const [apiPath, legacyPath, router] of routeMounts) {
@@ -141,9 +143,12 @@ app.use(errorHandler);
 
 // ===== Server Start =====
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`\n🚀 Server is running on http://localhost:${PORT}`);
     console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+import { initSocket } from './socket.js';
+initSocket(server);
 
 export default app;

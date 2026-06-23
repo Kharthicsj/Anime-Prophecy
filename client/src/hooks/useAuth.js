@@ -73,10 +73,14 @@ export const useAuth = () => {
             });
 
             if (response.data.success) {
-                setUser(response.data.data.user);
-                writeStoredUser(response.data.data.user);
-                localStorage.setItem("token", response.data.data.token);
-                return response.data.data;
+                if (response.data.data.token) {
+                    setUser(response.data.data.user);
+                    writeStoredUser(response.data.data.user);
+                    localStorage.setItem("token", response.data.data.token);
+                    return { success: true, pending: false, user: response.data.data.user };
+                } else {
+                    return { success: true, pending: true, message: response.data.message };
+                }
             }
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Registration failed';

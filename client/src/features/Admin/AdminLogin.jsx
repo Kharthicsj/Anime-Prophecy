@@ -126,12 +126,6 @@ const AdminLogin = () => {
 									Remember me
 								</span>
 							</label>
-							<a
-								href="#forgot"
-								className="text-purple-400 hover:text-purple-300"
-							>
-								Forgot password?
-							</a>
 						</div>
 
 						{/* Submit Button */}
@@ -145,7 +139,7 @@ const AdminLogin = () => {
 						</Button>
 
 						{/* Register Link */}
-						{/* <div className="text-center pt-4 border-t border-zinc-800">
+						<div className="text-center pt-4 border-t border-zinc-800">
 							<p className="text-zinc-400 text-sm">
 								First time?
 								<button
@@ -156,7 +150,7 @@ const AdminLogin = () => {
 									Create admin account
 								</button>
 							</p>
-						</div> */}
+						</div>
 					</form>
 				</div>
 

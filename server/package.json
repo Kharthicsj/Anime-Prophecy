@@ -32,7 +32,10 @@
 		"jsonwebtoken": "^9.0.3",
 		"mongoose": "^7.5.0",
 		"multer": "^1.4.5-lts.1",
-		"nodemailer": "^8.0.8"
+		"nodemailer": "^8.0.8",
+		"socket.io": "^4.8.3",
+		"socketio": "^1.0.0",
+		"ua-parser-js": "^2.0.10"
 	},
 	"devDependencies": {
 		"nodemon": "^3.0.1"

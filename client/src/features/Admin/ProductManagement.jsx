@@ -10,10 +10,59 @@ import { BoxIcon, UploadIcon } from "../../components/common/Icons";
 import { countries } from "../../utils/countries";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
 import { SearchableDropdown } from "../../components/common/FilterPanel";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ─── Utility to convert to Camel Case (Title Case for UI) ───────────
 const toTitleCase = (str) => {
 	return str.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+};
+
+const SortableImageItem = ({ id, img, index, removeImage, setMain }) => {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+		zIndex: isDragging ? 10 : 1,
+	};
+	return (
+		<div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`relative group aspect-square rounded-xl overflow-hidden bg-zinc-800 border-2 cursor-grab active:cursor-grabbing ${isDragging ? "opacity-75 ring-2 ring-purple-500 shadow-xl scale-105" : "opacity-100"} ${img.isMain ? "border-purple-500" : "border-transparent hover:border-zinc-600"}`}>
+			<img src={img.previewUrl || img.url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105 pointer-events-none" />
+			<div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+				<div className="flex justify-end">
+					<button type="button" onPointerDown={(e) => { e.stopPropagation(); removeImage(index); }} className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors cursor-pointer relative z-10">×</button>
+				</div>
+				<button type="button" onPointerDown={(e) => { e.stopPropagation(); setMain(index); }} className={`py-1.5 text-xs font-semibold rounded-lg w-full cursor-pointer relative z-10 ${img.isMain ? "bg-purple-600 text-white" : "bg-white/20 text-white hover:bg-white/30"}`}>{img.isMain ? "Main Image" : "Set as Main"}</button>
+			</div>
+		</div>
+	);
+};
+
+const SortableVideoItem = ({ id, vid, index, removeVideo, setPrimaryVideo }) => {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+		zIndex: isDragging ? 10 : 1,
+	};
+	return (
+		<div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`rounded-xl overflow-hidden border-2 cursor-grab active:cursor-grabbing ${isDragging ? "opacity-75 ring-2 ring-blue-500 shadow-xl scale-[1.02]" : "opacity-100"} ${vid.isPrimary ? "border-blue-500" : "border-zinc-700"}`}>
+			<video src={vid.previewUrl || vid.url} controls preload="metadata" className="w-full max-h-48 object-contain bg-black" onPointerDown={(e) => e.stopPropagation()} />
+			<div className="flex items-center justify-between px-3 py-2 bg-zinc-900 pointer-events-auto relative z-10">
+				<div className="flex items-center gap-2">
+					{vid.isPrimary ? (
+						<span className="text-xs text-blue-400 font-semibold">&#9679; Primary Video</span>
+					) : (
+						<button type="button" onPointerDown={(e) => { e.stopPropagation(); setPrimaryVideo(index); }} className="text-xs text-zinc-400 hover:text-blue-400 transition-colors cursor-pointer relative z-10">Set as Primary</button>
+					)}
+					{!vid.url && <span className="text-xs text-yellow-500">⏳ Pending</span>}
+					{vid.url && <span className="text-xs text-green-500">✓ Saved</span>}
+				</div>
+				<button type="button" onPointerDown={(e) => { e.stopPropagation(); removeVideo(index); }} className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition-colors cursor-pointer relative z-10">&times;</button>
+			</div>
+		</div>
+	);
 };
 
 // ─── Static option lists (module-level so useMemo deps are stable) ───────────
@@ -239,6 +288,7 @@ const ProductManagement = () => {
 		setImageItems(
 			prod.images
 				? prod.images.map((img) => ({
+						id: img.publicId || `img-${Math.random().toString(36).substr(2, 9)}`,
 						file: null,
 						previewUrl: null,
 						url: img.url,
@@ -250,6 +300,7 @@ const ProductManagement = () => {
 		setVideoItems(
 			prod.videos
 				? prod.videos.map((vid) => ({
+						id: vid.publicId || `vid-${Math.random().toString(36).substr(2, 9)}`,
 						file: null,
 						previewUrl: null,
 						url: vid.url,
@@ -287,7 +338,7 @@ const ProductManagement = () => {
 		const previewUrl = URL.createObjectURL(file);
 		setImageItems((prev) => {
 			const isFirst = prev.length === 0;
-			return [...prev, { file, previewUrl, url: null, publicId: null, isMain: isFirst }];
+			return [...prev, { id: `img-${Math.random().toString(36).substr(2, 9)}`, file, previewUrl, url: null, publicId: null, isMain: isFirst }];
 		});
 	}, []);
 
@@ -308,7 +359,7 @@ const ProductManagement = () => {
 		const previewUrl = URL.createObjectURL(file);
 		setVideoItems((prev) => {
 			const isFirst = prev.length === 0;
-			return [...prev, { file, previewUrl, url: null, publicId: null, isPrimary: isFirst }];
+			return [...prev, { id: `vid-${Math.random().toString(36).substr(2, 9)}`, file, previewUrl, url: null, publicId: null, isPrimary: isFirst }];
 		});
 	}, [videoItems.length]);
 
@@ -353,6 +404,33 @@ const ProductManagement = () => {
 	};
 	const setPrimaryVideo = (idx) =>
 		setVideoItems((prev) => prev.map((vid, i) => ({ ...vid, isPrimary: i === idx })));
+
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+	);
+
+	const handleImageDragEndDnd = (event) => {
+		const { active, over } = event;
+		if (over && active.id !== over.id) {
+			setImageItems((items) => {
+				const oldIndex = items.findIndex((i) => i.id === active.id);
+				const newIndex = items.findIndex((i) => i.id === over.id);
+				return arrayMove(items, oldIndex, newIndex);
+			});
+		}
+	};
+
+	const handleVideoDragEndDnd = (event) => {
+		const { active, over } = event;
+		if (over && active.id !== over.id) {
+			setVideoItems((items) => {
+				const oldIndex = items.findIndex((i) => i.id === active.id);
+				const newIndex = items.findIndex((i) => i.id === over.id);
+				return arrayMove(items, oldIndex, newIndex);
+			});
+		}
+	};
 
 	const uploadPendingImages = async () => {
 		const pending = imageItems.filter((i) => i.file && !i.url);
@@ -1346,53 +1424,15 @@ const ProductManagement = () => {
 										</p>
 									)}
 									{imageItems.length > 0 && (
-										<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-											{imageItems.map((img, idx) => (
-												<div
-													key={idx}
-													className={`relative group aspect-square rounded-xl overflow-hidden bg-zinc-800 border-2 ${img.isMain ? "border-purple-500" : "border-transparent hover:border-zinc-600"}`}
-												>
-													<img
-														src={
-															img.previewUrl ||
-															img.url
-														}
-														alt=""
-														className="w-full h-full object-cover transition-transform group-hover:scale-105"
-													/>
-													<div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-														<div className="flex justify-end">
-															<button
-																type="button"
-																onClick={(
-																	e,
-																) => {
-																	e.stopPropagation();
-																	removeImage(
-																		idx,
-																	);
-																}}
-																className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
-															>
-																×
-															</button>
-														</div>
-														<button
-															type="button"
-															onClick={(e) => {
-																e.stopPropagation();
-																setMain(idx);
-															}}
-															className={`py-1.5 text-xs font-semibold rounded-lg w-full ${img.isMain ? "bg-purple-600 text-white" : "bg-white/20 text-white hover:bg-white/30"}`}
-														>
-															{img.isMain
-																? "Main Image"
-																: "Set as Main"}
-														</button>
-													</div>
+										<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleImageDragEndDnd}>
+											<SortableContext items={imageItems.map(i => i.id)} strategy={rectSortingStrategy}>
+												<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
+													{imageItems.map((img, idx) => (
+														<SortableImageItem key={img.id} id={img.id} img={img} index={idx} removeImage={removeImage} setMain={setMain} />
+													))}
 												</div>
-											))}
-										</div>
+											</SortableContext>
+										</DndContext>
 									)}
 								</div>
 
@@ -1439,37 +1479,15 @@ const ProductManagement = () => {
 									)}
 
 									{videoItems.length > 0 && (
-										<div className="space-y-3 mt-2">
-											{videoItems.map((vid, idx) => (
-												<div
-													key={idx}
-													className={`rounded-xl overflow-hidden border-2 ${
-														vid.isPrimary ? "border-blue-500" : "border-zinc-700"
-													}`}
-												>
-													<video
-														src={vid.previewUrl || vid.url}
-														controls
-														preload="metadata"
-														className="w-full max-h-48 object-contain bg-black"
-													/>
-													<div className="flex items-center justify-between px-3 py-2 bg-zinc-900">
-														<div className="flex items-center gap-2">
-															{vid.isPrimary ? (
-																<span className="text-xs text-blue-400 font-semibold">&#9679; Primary Video</span>
-															) : (
-																<button type="button" onClick={() => setPrimaryVideo(idx)} className="text-xs text-zinc-400 hover:text-blue-400 transition-colors">
-																	Set as Primary
-																</button>
-															)}
-															{!vid.url && <span className="text-xs text-yellow-500">⏳ Pending</span>}
-															{vid.url && <span className="text-xs text-green-500">✓ Saved</span>}
-														</div>
-														<button type="button" onClick={() => removeVideo(idx)} className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition-colors">&times;</button>
-													</div>
+										<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleVideoDragEndDnd}>
+											<SortableContext items={videoItems.map(v => v.id)} strategy={verticalListSortingStrategy}>
+												<div className="space-y-3 mt-2">
+													{videoItems.map((vid, idx) => (
+														<SortableVideoItem key={vid.id} id={vid.id} vid={vid} index={idx} removeVideo={removeVideo} setPrimaryVideo={setPrimaryVideo} />
+													))}
 												</div>
-											))}
-										</div>
+											</SortableContext>
+										</DndContext>
 									)}
 								</div>
 

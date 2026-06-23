@@ -8,6 +8,7 @@ import MainHeader from "../../components/common/MainHeader";
 import CountryFlag from "../../components/common/CountryFlag";
 import NotFoundPage from "../NotFound/NotFoundPage";
 import ProductCarousel from "../../components/ui/ProductCarousel";
+import SuggestProductModal from "../../components/common/SuggestProductModal";
 import { flattenCarouselItems } from "../../utils/carouselHelpers";
 import mainLogo from "../../assets/main_logo.jpeg";
 import {
@@ -57,6 +58,7 @@ const Homepage = () => {
 	const [productsLoading, setProductsLoading] = useState(false);
 	const [totalProducts, setTotalProducts] = useState(0);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
 	const sentinelRef = useRef(null);
 	const catalogRef = useRef(null);
@@ -307,9 +309,44 @@ const Homepage = () => {
 									<span>{c.label}</span>
 								</button>
 							))}
+						<button
+							onClick={() => setIsSuggestionModalOpen(true)}
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: "0.45rem",
+								padding: "0.35rem 0.75rem",
+								borderRadius: "999px",
+								border: "1px solid #7c3aed",
+								background: "rgba(124, 58, 237, 0.1)",
+								color: "#c4b5fd",
+								fontSize: "0.8rem",
+								cursor: "pointer",
+								fontFamily: "inherit",
+								transition: "all 0.2s",
+								fontWeight: 600,
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = "rgba(124, 58, 237, 0.2)";
+								e.currentTarget.style.color = "#fff";
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = "rgba(124, 58, 237, 0.1)";
+								e.currentTarget.style.color = "#c4b5fd";
+							}}
+						>
+							<FaStar size={12} color="#facc15" />
+							Suggest a Product
+						</button>
 					</div>
 				</div>
 			</section>
+
+			<SuggestProductModal 
+				isOpen={isSuggestionModalOpen} 
+				onClose={() => setIsSuggestionModalOpen(false)} 
+				defaultCountry={activeCountryValue}
+			/>
 
 			{/* ══════════ 3. PRODUCT CAROUSEL ══════════ */}
 			{!contentLoading && carouselItems.length > 0 && (

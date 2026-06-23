@@ -71,8 +71,13 @@ const AdminRegister = () => {
 			formData.confirmPassword,
 		);
 
-		if (result) {
-			navigate("/admin/dashboard");
+		if (result?.success) {
+            if (result.pending) {
+                alert(result.message || "Registration successful, pending admin approval");
+                navigate("/admin/login");
+            } else {
+			    navigate("/admin/dashboard");
+            }
 		} else {
 			setSubmitError(
 				authError || "Registration failed. Please try again.",

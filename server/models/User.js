@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ['user', 'admin'],
+            enum: ['user', 'admin', 'pending_admin'],
             default: 'user',
         },
         isActive: {
@@ -37,6 +37,17 @@ const userSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        sessions: [{
+            sessionId: String,
+            deviceType: String,
+            browser: String,
+            os: String,
+            ipAddress: String,
+            loginTime: { type: Date, default: Date.now },
+            lastActive: { type: Date, default: Date.now },
+            socketId: String,
+            isOnline: { type: Boolean, default: false }
+        }],
     },
     { timestamps: true }
 );
