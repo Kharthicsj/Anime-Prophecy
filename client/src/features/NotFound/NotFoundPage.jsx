@@ -26,7 +26,7 @@ const NotFoundPage = () => {
 						Go to Country Selection
 					</Button>
 					<Button
-						onClick={() => navigate("/home")}
+						onClick={() => navigate("/")}
 						variant="secondary"
 						size="md"
 					>
