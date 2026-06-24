@@ -60,6 +60,10 @@ const Homepage = () => {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
+	// Trending carousel state
+	const [trendingHovered, setTrendingHovered] = useState(false);
+	const trendingTrackRef = useRef(null);
+
 	const sentinelRef = useRef(null);
 	const catalogRef = useRef(null);
 	const isFetchingRef = useRef(false);
@@ -224,8 +228,76 @@ const Homepage = () => {
 				fontFamily: "var(--font-sans, Inter, system-ui, sans-serif)",
 			}}
 		>
-			{/* spin keyframe for loading icon */}
-			<style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+			{/* Global keyframes */}
+			<style>{`
+				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+				@keyframes trendingScroll {
+					0%   { transform: translateX(0); }
+					100% { transform: translateX(-50%); }
+				}
+				.trending-track {
+					display: flex;
+					gap: 1rem;
+					width: max-content;
+					animation: trendingScroll 28s linear infinite;
+					will-change: transform;
+				}
+				.trending-track.paused { animation-play-state: paused; }
+				.trending-nav-btn {
+					position: absolute;
+					top: 50%;
+					transform: translateY(-50%);
+					z-index: 10;
+					width: 38px;
+					height: 38px;
+					border-radius: 50%;
+					border: 1px solid rgba(168,85,247,0.45);
+					background: rgba(10,10,15,0.85);
+					backdrop-filter: blur(8px);
+					color: #c4b5fd;
+					cursor: pointer;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					transition: background 0.2s, border-color 0.2s, transform 0.2s;
+					font-size: 1rem;
+				}
+				.trending-nav-btn:hover {
+					background: rgba(124,58,237,0.55);
+					border-color: #a855f7;
+					color: #fff;
+					transform: translateY(-50%) scale(1.08);
+				}
+				.trending-nav-btn.left  { left: 0; }
+				.trending-nav-btn.right { right: 0; }
+				.trending-viewport {
+					overflow: hidden;
+					width: 100%;
+					position: relative;
+					border-radius: 12px;
+				}
+				.trending-viewport::before,
+				.trending-viewport::after {
+					content: '';
+					position: absolute;
+					top: 0; bottom: 0;
+					width: 60px;
+					z-index: 5;
+					pointer-events: none;
+				}
+				.trending-viewport::before {
+					left: 0;
+					background: linear-gradient(to right, #09090b 0%, transparent 100%);
+				}
+				.trending-viewport::after {
+					right: 0;
+					background: linear-gradient(to left, #09090b 0%, transparent 100%);
+				}
+				@media (max-width: 640px) {
+					.trending-nav-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+					.trending-viewport::before, .trending-viewport::after { width: 32px; }
+				}
+			`}</style>
 
 			{/* ══════════ HEADER ══════════ */}
 			<MainHeader onSearch={handleSearch} />
@@ -380,7 +452,7 @@ const Homepage = () => {
 				</section>
 			)}
 
-			{/* ══════════ 4. TRENDING PRODUCTS (per region) ══════════ */}
+			{/* ══════════ 4. TRENDING PRODUCTS — horizontal carousel ══════════ */}
 			{(trendingLoading || trendingProducts.length > 0) && (
 				<section
 					style={{
@@ -399,40 +471,107 @@ const Homepage = () => {
 							icon={<FaFire size={11} color="#f97316" />}
 							text={`Featured in ${activeCountry.label}`}
 						/>
+
 						{trendingLoading ? (
+							/* Loading skeletons — single row */
 							<div
 								style={{
-									display: "grid",
-									gridTemplateColumns:
-										"repeat(auto-fill,minmax(200px,1fr))",
+									display: "flex",
 									gap: "1rem",
 									marginTop: "1.25rem",
+									overflowX: "hidden",
 								}}
 							>
-								{[...Array(4)].map((_, i) => (
+								{[...Array(5)].map((_, i) => (
 									<div
 										key={i}
 										className="animate-shimmer"
 										style={{
-											height: "280px",
+											height: "320px",
+											minWidth: "200px",
 											borderRadius: "14px",
+											flex: "0 0 200px",
 										}}
 									/>
 								))}
 							</div>
 						) : (
+							/* ── Carousel wrapper ── */
 							<div
 								style={{
-									display: "grid",
-									gridTemplateColumns:
-										"repeat(auto-fill,minmax(200px,1fr))",
-									gap: "1rem",
+									position: "relative",
 									marginTop: "1.25rem",
 								}}
+								onMouseEnter={() => setTrendingHovered(true)}
+								onMouseLeave={() => setTrendingHovered(false)}
 							>
-								{trendingProducts.map((p) => (
-									<ProductCard key={p._id} product={p} />
-								))}
+								{/* Left nav button */}
+								<button
+									className="trending-nav-btn left"
+									aria-label="Scroll trending left"
+									onClick={() => {
+										if (trendingTrackRef.current) {
+											trendingTrackRef.current.scrollBy({ left: -280, behavior: "smooth" });
+										}
+									}}
+								>
+									&#8249;
+								</button>
+
+								{/* Viewport — clips overflow */}
+								<div className="trending-viewport">
+									{/* Scrollable track (used by nav buttons) */}
+									<div
+										ref={trendingTrackRef}
+										style={{
+											overflowX: "auto",
+											scrollbarWidth: "none",
+											msOverflowStyle: "none",
+										}}
+									>
+										{/* Animated marquee track — duplicated for seamless loop */}
+										<div
+											className={`trending-track${trendingHovered ? " paused" : ""}`}
+											style={{
+												/* scale animation speed with item count */
+												animationDuration: `${Math.max(18, trendingProducts.length * 3.5)}s`,
+											}}
+										>
+											{/* Original set */}
+											{trendingProducts.map((p) => (
+												<div
+													key={p._id}
+													style={{ flex: "0 0 220px", minWidth: "220px" }}
+												>
+													<ProductCard product={p} />
+												</div>
+											))}
+											{/* Duplicate set for seamless infinite loop */}
+											{trendingProducts.map((p) => (
+												<div
+													key={`dup-${p._id}`}
+													style={{ flex: "0 0 220px", minWidth: "220px" }}
+													aria-hidden="true"
+												>
+													<ProductCard product={p} />
+												</div>
+											))}
+										</div>
+									</div>
+								</div>
+
+								{/* Right nav button */}
+								<button
+									className="trending-nav-btn right"
+									aria-label="Scroll trending right"
+									onClick={() => {
+										if (trendingTrackRef.current) {
+											trendingTrackRef.current.scrollBy({ left: 280, behavior: "smooth" });
+										}
+									}}
+								>
+									&#8250;
+								</button>
 							</div>
 						)}
 					</div>
