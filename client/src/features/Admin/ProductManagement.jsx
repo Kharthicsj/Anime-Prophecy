@@ -65,6 +65,12 @@ const SortableVideoItem = ({ id, vid, index, removeVideo, setPrimaryVideo }) => 
 	);
 };
 
+// ─── Pure helper (module-level, no React deps) ───────────────────────────────
+const mergeUnique = (staticArr, dynamicArr) => {
+	const set = new Set([...staticArr, ...dynamicArr]);
+	return [...set];
+};
+
 // ─── Static option lists (module-level so useMemo deps are stable) ───────────
 const ANIME_OPTIONS = [
 	"Naruto", "Bleach", "One Piece", "Dragon Ball Z", "Fairy Tail",
@@ -279,6 +285,22 @@ const ProductManagement = () => {
 	const storeOptions = STORE_OPTIONS;
 	const categoryOptions = CATEGORY_OPTIONS;
 	const countryOptions = countries.map((c) => c.value);
+
+	// ─── Form dropdown options (static + dynamic, "Other" always last) ──────────
+	const formAnimeOptions = useMemo(() => [
+		...mergeUnique(animeOptions, dynamicOptions.animeTags).filter(v => v !== "Other"),
+		"Other",
+	], [dynamicOptions.animeTags]);
+
+	const formStoreOptions = useMemo(() => [
+		...mergeUnique(storeOptions, dynamicOptions.stores).filter(v => v !== "Other"),
+		"Other",
+	], [dynamicOptions.stores]);
+
+	const formCategoryOptions = useMemo(() => [
+		...mergeUnique(categoryOptions, dynamicOptions.categories).filter(v => v !== "Other"),
+		"Other",
+	], [dynamicOptions.categories]);
 	// Comprehensive world currency list: { code, symbol, name }
 	const CURRENCY_LIST = [
 		{ code: "USD", symbol: "$",   name: "US Dollar" },
@@ -424,10 +446,7 @@ const ProductManagement = () => {
 		}
 	}, []);
 
-	const mergeUnique = (staticArr, dynamicArr) => {
-		const set = new Set([...staticArr, ...dynamicArr]);
-		return [...set];
-	};
+	// mergeUnique is defined at module level
 
 	const finalAnimeOptions = [
 		{ value: "All", label: "All Anime" },
@@ -487,13 +506,18 @@ const ProductManagement = () => {
 			isActive: prod.isActive !== undefined ? prod.isActive : true,
 			scheduledUploadTime: prod.scheduledUploadTime ? new Date(prod.scheduledUploadTime).toISOString().slice(0, 16) : "",
 		});
-		if (!animeOptions.includes(prod.animeTag)) {
+		// Use merged (static + dynamic) lists so DB-stored custom values are recognised
+		const allAnime = mergeUnique(animeOptions, dynamicOptions.animeTags);
+		const allCategories = mergeUnique(categoryOptions, dynamicOptions.categories);
+		const allStores = mergeUnique(storeOptions, dynamicOptions.stores);
+
+		if (!allAnime.includes(prod.animeTag)) {
 			setFormData((p) => ({ ...p, animeTag: "Other" }));
 			setCustomAnimeTag(prod.animeTag || "");
 		} else {
 			setCustomAnimeTag("");
 		}
-		if (!categoryOptions.includes(prod.category)) {
+		if (!allCategories.includes(prod.category)) {
 			setFormData((p) => ({ ...p, category: "Other" }));
 			setCustomCategory(prod.category || "");
 		} else {
@@ -505,7 +529,7 @@ const ProductManagement = () => {
 		} else {
 			setCustomSubCategory("");
 		}
-		if (!storeOptions.includes(prod.store)) {
+		if (!allStores.includes(prod.store)) {
 			setFormData((p) => ({ ...p, store: "Other" }));
 			setCustomStore(prod.store || "");
 		} else {
@@ -829,18 +853,31 @@ const ProductManagement = () => {
 				scheduledUploadTime: formData.scheduledUploadTime || null,
 			};
 
+			// Helper: inject a new custom value into dynamicOptions so the dropdown
+			// reflects it immediately without waiting for a server round-trip.
+			const injectDynamic = (finalAnime, finalCategory, finalStore) => {
+				setDynamicOptions(prev => ({
+					...prev,
+					animeTags: mergeUnique(prev.animeTags, finalAnime && !ANIME_OPTIONS.includes(finalAnime) ? [finalAnime] : []),
+					categories: mergeUnique(prev.categories, finalCategory && !CATEGORY_OPTIONS.includes(finalCategory) ? [finalCategory] : []),
+					stores: mergeUnique(prev.stores, finalStore && !STORE_OPTIONS.includes(finalStore) ? [finalStore] : []),
+				}));
+			};
+
 			if (editingId) {
 				const res = await apiClient.put(
 					`/products/${editingId}`,
 					payload,
 				);
 				if (res.data.success) {
+					injectDynamic(payload.animeTag, payload.category, payload.store);
 					setSuccessMessage("Product updated successfully!");
 					setTimeout(() => setViewMode("list"), 1500);
 				}
 			} else {
 				const res = await apiClient.post("/products", payload);
 				if (res.data.success) {
+					injectDynamic(payload.animeTag, payload.category, payload.store);
 					setSuccessMessage("Product created successfully!");
 					setTimeout(() => setViewMode("list"), 1500);
 				}
@@ -1344,7 +1381,7 @@ const ProductManagement = () => {
 												name="category"
 												value={formData.category}
 												onChange={handleInputChange}
-												options={categoryOptions}
+												options={formCategoryOptions}
 												placeholder="Select Category"
 											/>
 											{formData.category === "Other" && (
@@ -1407,7 +1444,7 @@ const ProductManagement = () => {
 												name="animeTag"
 												value={formData.animeTag}
 												onChange={handleInputChange}
-												options={animeOptions}
+												options={formAnimeOptions}
 												placeholder="Select Anime"
 											/>
 											{formData.animeTag === "Other" && (
@@ -1481,7 +1518,7 @@ const ProductManagement = () => {
 												name="store"
 												value={formData.store}
 												onChange={handleInputChange}
-												options={storeOptions}
+												options={formStoreOptions}
 												placeholder="Select Store"
 											/>
 											{formData.store === "Other" && (
