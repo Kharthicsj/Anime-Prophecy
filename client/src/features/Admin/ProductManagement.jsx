@@ -10,6 +10,8 @@ import { BoxIcon, UploadIcon } from "../../components/common/Icons";
 import { countries } from "../../utils/countries";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
 import { SearchableDropdown } from "../../components/common/FilterPanel";
+import FilterBar from "../../components/common/FilterBar";
+import { FiCopy, FiX, FiRefreshCw, FiSearch, FiArrowDown } from "react-icons/fi";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -188,6 +190,219 @@ const CurrencySearchableSelect = ({ currencies, value, onChange, name }) => {
 	);
 };
 
+// ─── Copy Product Modal ───────────────────────────────────────────────────────
+const CopyProductModal = ({ onSelect, onClose }) => {
+	const [selectedFilters, setSelectedFilters] = useState({
+		search: "",
+		animeTag: "All Anime",
+		store: "All Stores",
+		category: "All Categories",
+		country: "All Countries",
+		status: "All Statuses",
+		sort: "-createdAt"
+	});
+
+	const [products, setProducts] = useState([]);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [hasMore, setHasMore] = useState(true);
+	const [isLoading, setIsLoading] = useState(false);
+	const [totalProducts, setTotalProducts] = useState(0);
+
+	const sentinelRef = useRef(null);
+	const isFetchingRef = useRef(false);
+
+	const PAGE_SIZE = 20;
+
+	const fetchPage = useCallback(async (page, reset = false) => {
+		if (isFetchingRef.current) return;
+		isFetchingRef.current = true;
+		setIsLoading(true);
+		try {
+			const params = new URLSearchParams({
+				page,
+				limit: PAGE_SIZE,
+				sort: selectedFilters.sort || "-createdAt",
+				...(selectedFilters.search && { search: selectedFilters.search }),
+				...(selectedFilters.animeTag && selectedFilters.animeTag !== "All Anime" && { animeTag: selectedFilters.animeTag }),
+				...(selectedFilters.category && selectedFilters.category !== "All Categories" && { category: selectedFilters.category }),
+				...(selectedFilters.store && selectedFilters.store !== "All Stores" && { store: selectedFilters.store }),
+				...(selectedFilters.country && selectedFilters.country !== "All Countries" && { country: selectedFilters.country }),
+				...(selectedFilters.status && selectedFilters.status !== "All Statuses" && { status: selectedFilters.status === "Inactive (Private)" ? "inactive" : selectedFilters.status.toLowerCase() }),
+			});
+			const res = await apiClient.get(`/products/admin/all?${params}`);
+			const data = res.data?.data;
+			const newProducts = Array.isArray(data?.products) ? data.products : [];
+			const total = data?.pagination?.total || 0;
+
+			setTotalProducts(total);
+			setProducts(prev => reset ? newProducts : [...prev, ...newProducts]);
+			setHasMore(newProducts.length === PAGE_SIZE && newProducts.length < total);
+			setCurrentPage(page);
+		} catch (err) {
+			console.error("Failed to fetch products for copy modal", err);
+		} finally {
+			setIsLoading(false);
+			isFetchingRef.current = false;
+		}
+	}, [selectedFilters]);
+
+	// Reset on filter change
+	useEffect(() => {
+		setProducts([]);
+		setCurrentPage(1);
+		setHasMore(true);
+		fetchPage(1, true);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedFilters]);
+
+	// Intersection Observer
+	useEffect(() => {
+		const el = sentinelRef.current;
+		if (!el) return;
+		const observer = new IntersectionObserver((entries) => {
+			if (entries[0].isIntersecting && hasMore && !isLoading) {
+				fetchPage(currentPage + 1);
+			}
+		}, { rootMargin: "200px" });
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasMore, isLoading, currentPage, fetchPage]);
+
+	// Close on Escape & Body Scroll Lock
+	useEffect(() => {
+		const handler = (e) => { if (e.key === "Escape") onClose(); };
+		document.addEventListener("keydown", handler);
+		document.body.style.overflow = "hidden";
+		
+		return () => {
+			document.removeEventListener("keydown", handler);
+			document.body.style.overflow = "unset";
+		};
+	}, [onClose]);
+
+	return (
+		<div
+			className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-md p-4 sm:p-6"
+			onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+		>
+			<div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+				{/* Header */}
+				<div className="p-6 border-b border-zinc-800 flex items-center justify-between gap-4 bg-zinc-900 shrink-0">
+					<div>
+						<h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+							<FiCopy className="text-purple-400" /> Copy from Existing Product
+						</h2>
+						<p className="text-sm text-zinc-400 mt-1.5">
+							All data including images, affiliate link, category, store & price will be copied.
+							<span className="text-purple-400 font-medium ml-1">Images will be handled as new uploads.</span>
+						</p>
+					</div>
+					<button
+						onClick={onClose}
+						className="flex-shrink-0 text-zinc-400 hover:text-white transition-colors p-2.5 rounded-xl hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+					>
+						<FiX className="w-5 h-5" />
+					</button>
+				</div>
+
+				{/* Search & Filters */}
+				<div className="p-6 border-b border-zinc-800 bg-zinc-950/50 shrink-0">
+					<FilterBar
+						selectedFilters={selectedFilters}
+						onFilterChange={setSelectedFilters}
+					/>
+					<div className="flex justify-between items-center mt-5">
+						<p className="text-xs text-zinc-500 font-bold tracking-widest uppercase">
+							{products.length} of {totalProducts} products loaded
+						</p>
+					</div>
+				</div>
+
+				{/* Product List Grid */}
+				<div className="overflow-y-auto flex-1 p-6 bg-black/20">
+					{products.length === 0 && !isLoading ? (
+						<div className="py-32 text-center text-zinc-500 flex flex-col items-center justify-center">
+							<FiSearch className="text-6xl mb-5 opacity-40" />
+							<p className="font-semibold text-xl text-zinc-300">No products match your search</p>
+							<p className="text-sm mt-2 text-zinc-500">Try adjusting your filters to find what you're looking for.</p>
+						</div>
+					) : (
+						<>
+							<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+								{products.map(p => (
+									<div
+										key={p._id}
+										onClick={() => onSelect(p)}
+										className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden hover:border-purple-500 transition-all hover:shadow-xl hover:shadow-purple-900/20 group cursor-pointer flex flex-col"
+									>
+										{/* Product Image */}
+										<div className="relative overflow-hidden bg-zinc-800 aspect-square">
+											<img
+												src={p.images?.[0]?.url || "placeholder.jpg"}
+												alt={p.title}
+												className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+											/>
+											<div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-col items-start">
+												<span className="bg-purple-600/95 text-white text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md shadow-sm">
+													{p.animeTag}
+												</span>
+											</div>
+											<div className="absolute top-2.5 right-2.5">
+												<span className="bg-zinc-900/95 text-yellow-400 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md border border-zinc-700 shadow-sm">
+													{p.store}
+												</span>
+											</div>
+										</div>
+
+										{/* Product Info */}
+										<div className="p-4 flex flex-col flex-1 justify-between gap-4">
+											<div>
+												<h3 className="font-bold text-zinc-100 line-clamp-2 text-sm leading-relaxed group-hover:text-purple-300 transition-colors">
+													{p.title}
+												</h3>
+												<p className="text-zinc-500 text-xs mt-2 font-medium">
+													{p.category}{p.subCategory ? ` \u00b7 ${p.subCategory}` : ""}
+												</p>
+											</div>
+
+											{/* Price & Countries */}
+											<div className="flex items-center justify-between pt-3 border-t border-zinc-800/60">
+												<span className="text-purple-400 font-bold text-sm tracking-wide">
+													{p.currency} {p.price}
+												</span>
+												<span className="text-[10px] text-zinc-500 truncate ml-3 font-medium bg-zinc-900/80 px-2 py-1 rounded-md border border-zinc-800">
+													{(p.countries || []).join(", ")}
+												</span>
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+
+							{/* Infinite Scroll Sentinel */}
+							{hasMore && (
+								<div ref={sentinelRef} className="h-24 flex items-center justify-center mt-6">
+									{isLoading && (
+										<span className="text-sm font-medium text-zinc-400 flex items-center gap-3 bg-zinc-900/80 px-5 py-2.5 rounded-full border border-zinc-800 shadow-sm">
+											<FiRefreshCw className="animate-spin text-purple-400" /> Loading more...
+										</span>
+									)}
+								</div>
+							)}
+
+							{!hasMore && products.length > 0 && (
+								<p className="text-center text-zinc-600 text-sm mt-12 mb-4 font-semibold">
+									All {totalProducts} products loaded ✓
+								</p>
+							)}
+						</>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};
+
 const ProductManagement = () => {
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -200,6 +415,11 @@ const ProductManagement = () => {
 	const [editingId, setEditingId] = useState(null);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+	// ─── Copy-from-product feature ───────────────────────────────────────────────
+	const [showCopyModal, setShowCopyModal] = useState(false);
+	const [copiedFromProduct, setCopiedFromProduct] = useState(""); // name of product metadata was copied from
+	const [isCopying, setIsCopying] = useState(false);
+
 	// Search / Sort / Filter state for list view
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortBy, setSortBy] = useState("-createdAt");
@@ -209,6 +429,14 @@ const ProductManagement = () => {
 	const [filterCountry, setFilterCountry] = useState("All");
 	const [filterStatus, setFilterStatus] = useState("All");
 	const [showScheduledModal, setShowScheduledModal] = useState(false);
+
+	// Pagination & Infinite Scroll states
+	const [currentPage, setCurrentPage] = useState(1);
+	const [hasMore, setHasMore] = useState(true);
+	const [totalProducts, setTotalProducts] = useState(0);
+	const sentinelRef = useRef(null);
+	const isFetchingRef = useRef(false);
+	const PAGE_SIZE = 30;
 
 	const initialForm = {
 		title: "",
@@ -432,19 +660,39 @@ const ProductManagement = () => {
 	const currencyOptions = CURRENCY_LIST.map(c => c.code);
 
 
-	const fetchProducts = useCallback(async () => {
-		setLoadingList(true);
+	const fetchProducts = useCallback(async (page = 1, reset = false) => {
+		if (isFetchingRef.current) return;
+		isFetchingRef.current = true;
+		if (reset) setLoadingList(true);
+		
 		try {
-			const res = await apiClient.get("/products/admin/all?limit=500");
-			if (res.data.success) {
-				setProducts(res.data.data.products);
-			}
+			const params = new URLSearchParams({
+				page,
+				limit: PAGE_SIZE,
+				sort: sortBy || "-createdAt",
+				...(searchQuery && { search: searchQuery }),
+				...(filterAnime !== "All" && { animeTag: filterAnime }),
+				...(filterCategory !== "All" && { category: filterCategory }),
+				...(filterStore !== "All" && { store: filterStore }),
+				...(filterCountry !== "All" && { country: filterCountry }),
+				...(filterStatus !== "All" && { status: filterStatus === "Inactive (Private)" ? "inactive" : filterStatus.toLowerCase() }),
+			});
+			const res = await apiClient.get(`/products/admin/all?${params}`);
+			const data = res.data?.data;
+			const newProducts = Array.isArray(data?.products) ? data.products : [];
+			const total = data?.pagination?.total || 0;
+			
+			setTotalProducts(total);
+			setProducts(prev => reset ? newProducts : [...prev, ...newProducts]);
+			setHasMore(newProducts.length === PAGE_SIZE && newProducts.length < total);
+			setCurrentPage(page);
 		} catch (err) {
 			console.error(err);
 		} finally {
-			setLoadingList(false);
+			if (reset) setLoadingList(false);
+			isFetchingRef.current = false;
 		}
-	}, []);
+	}, [searchQuery, sortBy, filterCategory, filterAnime, filterStore, filterCountry, filterStatus]);
 
 	// mergeUnique is defined at module level
 
@@ -470,9 +718,28 @@ const ProductManagement = () => {
 
 	useEffect(() => {
 		if (user && viewMode === "list") {
-			fetchProducts();
+			setProducts([]);
+			setCurrentPage(1);
+			setHasMore(true);
+			fetchProducts(1, true);
 		}
 	}, [user, viewMode, fetchProducts]);
+
+	// Intersection Observer for list view
+	useEffect(() => {
+		if (viewMode !== "list") return;
+		const el = sentinelRef.current;
+		if (!el) return;
+
+		const observer = new IntersectionObserver((entries) => {
+			if (entries[0].isIntersecting && hasMore && !loadingList && !isFetchingRef.current) {
+				fetchProducts(currentPage + 1, false);
+			}
+		}, { rootMargin: '100px' });
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasMore, loadingList, currentPage, fetchProducts, viewMode]);
 
 	const handleDelete = async (id) => {
 		if (!window.confirm("Are you sure you want to delete this product?"))
@@ -480,7 +747,10 @@ const ProductManagement = () => {
 		setIsDeleting(true);
 		try {
 			await apiClient.delete(`/products/${id}`);
-			fetchProducts();
+			setProducts([]);
+			setCurrentPage(1);
+			setHasMore(true);
+			fetchProducts(1, true);
 		} catch (err) {
 			alert("Failed to delete");
 		} finally {
@@ -572,7 +842,120 @@ const ProductManagement = () => {
 		setCustomCountryInput("");
 		setImageItems([]);
 		setVideoItems([]);
+		setCopiedFromProduct("");
+		// Ensure product list is available for the copy-modal even if admin never visited list view
+		if (products.length === 0) fetchProducts();
 		setViewMode("form");
+	};
+
+	const urlToFile = async (url, filename) => {
+		try {
+			const res = await fetch(url);
+			if (!res.ok) throw new Error("Network response was not ok");
+			const blob = await res.blob();
+			return new File([blob], filename, { type: blob.type });
+		} catch (err) {
+			console.error("Failed to fetch media:", err);
+			return null;
+		}
+	};
+
+	// ─── Apply metadata template from an existing product ────────────────────────
+	const applyProductTemplate = async (sourceProduct) => {
+		const allAnime = mergeUnique(animeOptions, dynamicOptions.animeTags);
+		const allCategories = mergeUnique(categoryOptions, dynamicOptions.categories);
+		const allStores = mergeUnique(storeOptions, dynamicOptions.stores);
+
+		setFormData(prev => ({
+			...prev,
+			title: sourceProduct.title || "",
+			description: sourceProduct.description || "",
+			animeTag: sourceProduct.animeTag || "AOT",
+			store: sourceProduct.store || "Amazon",
+			affiliateLink: sourceProduct.affiliateLink || "", // ALL data included
+			price: sourceProduct.price || "",
+			currency: sourceProduct.currency || "USD",
+			category: sourceProduct.category || "Clothing",
+			subCategory: sourceProduct.subCategory || "",
+			countries: sourceProduct.countries || ["US"],
+			colors: sourceProduct.colors || [],
+			sizes: sourceProduct.sizes || [],
+			isActive: sourceProduct.isActive !== undefined ? sourceProduct.isActive : true,
+			scheduledUploadTime: sourceProduct.scheduledUploadTime ? new Date(sourceProduct.scheduledUploadTime).toISOString().slice(0, 16) : "",
+		}));
+
+		// Handle custom anime
+		if (!allAnime.includes(sourceProduct.animeTag)) {
+			setFormData(p => ({ ...p, animeTag: "Other" }));
+			setCustomAnimeTag(sourceProduct.animeTag || "");
+		} else { setCustomAnimeTag(""); }
+
+		// Handle custom category
+		if (!allCategories.includes(sourceProduct.category)) {
+			setFormData(p => ({ ...p, category: "Other" }));
+			setCustomCategory(sourceProduct.category || "");
+		} else { setCustomCategory(""); }
+
+		// Handle custom subcategory
+		if (sourceProduct.subCategory && subCategoryMap[sourceProduct.category] && !subCategoryMap[sourceProduct.category].includes(sourceProduct.subCategory)) {
+			setFormData(p => ({ ...p, subCategory: "Other" }));
+			setCustomSubCategory(sourceProduct.subCategory || "");
+		} else { setCustomSubCategory(""); }
+
+		// Handle custom store
+		if (!allStores.includes(sourceProduct.store)) {
+			setFormData(p => ({ ...p, store: "Other" }));
+			setCustomStore(sourceProduct.store || "");
+		} else { setCustomStore(""); }
+
+		setErrors({});
+		setSubmitError("");
+		setCopiedFromProduct(sourceProduct.title || "selected product");
+		setShowCopyModal(false);
+
+		setIsCopying(true);
+		try {
+			// Fetch and set images as new files so they can be re-uploaded
+			const newImageItems = [];
+			if (sourceProduct.images && sourceProduct.images.length > 0) {
+				for (let i = 0; i < sourceProduct.images.length; i++) {
+					const img = sourceProduct.images[i];
+					const file = await urlToFile(img.url, `copied_image_${i}.jpg`);
+					if (file) {
+						newImageItems.push({
+							id: `img-${Math.random().toString(36).substr(2, 9)}`,
+							file: file,
+							previewUrl: URL.createObjectURL(file),
+							url: null, // force re-upload
+							publicId: null,
+							isMain: img.isMain
+						});
+					}
+				}
+			}
+			setImageItems(newImageItems);
+
+			const newVideoItems = [];
+			if (sourceProduct.videos && sourceProduct.videos.length > 0) {
+				for (let i = 0; i < sourceProduct.videos.length; i++) {
+					const vid = sourceProduct.videos[i];
+					const file = await urlToFile(vid.url, `copied_video_${i}.mp4`);
+					if (file) {
+						newVideoItems.push({
+							id: `vid-${Math.random().toString(36).substr(2, 9)}`,
+							file: file,
+							previewUrl: URL.createObjectURL(file),
+							url: null, // force re-upload
+							publicId: null,
+							isPrimary: vid.isPrimary
+						});
+					}
+				}
+			}
+			setVideoItems(newVideoItems);
+		} finally {
+			setIsCopying(false);
+		}
 	};
 
 	const addImageFile = useCallback((file) => {
@@ -903,7 +1286,7 @@ const ProductManagement = () => {
 
 	return (
 		<div className="min-h-screen bg-linear-to-br from-zinc-950 via-zinc-900 to-black pb-16">
-			{(submitting || isDeleting) && (
+			{(submitting || isDeleting || isCopying) && (
 				<LoadingAnimation
 					variant="overlay"
 					message={
@@ -913,7 +1296,9 @@ const ProductManagement = () => {
 								: uploadingCount > 0
 									? `Uploading ${uploadingCount} image(s)...`
 									: "Saving Product..."
-							: "Deleting Product..."
+							: isDeleting
+								? "Deleting Product..."
+								: "Fetching Media..."
 					}
 					submessage="Please wait"
 				/>
@@ -1139,50 +1524,23 @@ const ProductManagement = () => {
 							)}
 						</div>
 
-						{loadingList ? (
+						{loadingList && products.length === 0 ? (
 						<div className="flex justify-center items-center py-12">
 							<p className="text-zinc-400">
 								Loading products...
 							</p>
 						</div>
 					) : (() => {
-						// Client-side filter + sort
-						const q = searchQuery.toLowerCase();
-						let filtered = products.filter((p) => {
-							if (q && !p.title?.toLowerCase().includes(q) && !p.animeTag?.toLowerCase().includes(q) && !p.category?.toLowerCase().includes(q) && !p.store?.toLowerCase().includes(q)) return false;
-							if (filterCategory !== "All" && p.category !== filterCategory) return false;
-							if (filterAnime !== "All" && p.animeTag !== filterAnime) return false;
-							if (filterStore !== "All" && p.store !== filterStore) return false;
-							if (filterCountry !== "All" && !(p.countries || []).includes(filterCountry)) return false;
-							
-							if (filterStatus === "Active") {
-								if (!p.isActive || (p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date())) return false;
-							}
-							if (filterStatus === "Inactive") {
-								if (p.isActive) return false;
-							}
-							if (filterStatus === "Scheduled") {
-								if (!p.scheduledUploadTime || new Date(p.scheduledUploadTime) <= new Date()) return false;
-							}
+						if (products.length === 0 && !loadingList && (searchQuery !== "" || filterCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All")) return (
+							<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
+								<BoxIcon className="h-16 w-16 text-zinc-600 mx-auto mb-4" />
+								<h3 className="text-xl font-bold text-white mb-2">No Matches Found</h3>
+								<p className="text-zinc-400 mb-4">Try adjusting your search or filters.</p>
+								<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-purple-400 hover:underline text-sm">Clear filters</button>
+							</div>
+						);
 
-							return true;
-						});
-						// Sort
-						filtered = [...filtered].sort((a, b) => {
-							switch (sortBy) {
-								case "-createdAt": return new Date(b.createdAt) - new Date(a.createdAt);
-								case "createdAt":  return new Date(a.createdAt) - new Date(b.createdAt);
-								case "-views":    return (b.views || 0) - (a.views || 0);
-								case "-clicks":   return (b.clicks || 0) - (a.clicks || 0);
-								case "-buyNowClicks": return (b.buyNowClicks || 0) - (a.buyNowClicks || 0);
-								case "price":     return (a.price || 0) - (b.price || 0);
-								case "-price":    return (b.price || 0) - (a.price || 0);
-								case "title":     return (a.title || "").localeCompare(b.title || "");
-								default: return 0;
-							}
-						});
-
-						if (products.length === 0) return (
+						if (products.length === 0 && !loadingList) return (
 							<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
 								<BoxIcon className="h-16 w-16 text-zinc-600 mx-auto mb-4" />
 								<h3 className="text-xl font-bold text-white mb-2">No Products Yet</h3>
@@ -1191,20 +1549,11 @@ const ProductManagement = () => {
 							</div>
 						);
 
-						if (filtered.length === 0) return (
-							<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
-								<BoxIcon className="h-16 w-16 text-zinc-600 mx-auto mb-4" />
-								<h3 className="text-xl font-bold text-white mb-2">No Matches Found</h3>
-								<p className="text-zinc-400 mb-4">Try adjusting your search or filters.</p>
-								<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); }} className="text-purple-400 hover:underline text-sm">Clear filters</button>
-							</div>
-						);
-
 						return (
 						<>
-						<p className="text-zinc-500 text-xs mb-3">Showing {filtered.length} of {products.length} products</p>
+						<p className="text-zinc-500 text-xs mb-3">Showing {products.length} of {totalProducts} products</p>
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{filtered.map((p) => (
+								{products.map((p) => (
 									<div
 										key={p._id}
 										className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-purple-500 transition-colors group"
@@ -1317,6 +1666,23 @@ const ProductManagement = () => {
 									</div>
 									))}
 								</div>
+
+								{/* Infinite Scroll Sentinel */}
+								{hasMore && (
+									<div ref={sentinelRef} className="h-24 flex items-center justify-center mt-6">
+										{loadingList ? (
+											<span className="text-sm font-medium text-zinc-400 flex items-center gap-3 bg-zinc-900/80 px-5 py-2.5 rounded-full border border-zinc-800 shadow-sm">
+												<svg className="animate-spin h-4 w-4 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading more...
+											</span>
+										) : null}
+									</div>
+								)}
+
+								{!hasMore && products.length > 0 && (
+									<p className="text-center text-zinc-600 text-sm mt-12 mb-4 font-semibold">
+										All {totalProducts} products loaded ✓
+									</p>
+								)}
 							</>
 							);
 						})()
@@ -1325,6 +1691,22 @@ const ProductManagement = () => {
 				) : (
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 						<div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-8">
+							{/* ── Copy-from-product banner (create mode only) ── */}
+							{!editingId && (
+								<div className="mb-6 flex items-center gap-3 p-4 rounded-xl bg-zinc-800/70 border border-zinc-700">
+									<div className="flex-1">
+										<p className="text-sm font-semibold text-white">Adding a product for another country?</p>
+										<p className="text-xs text-zinc-400 mt-0.5">Copy all details including images and videos from an existing product.</p>
+									</div>
+									<button
+										type="button"
+										onClick={() => setShowCopyModal(true)}
+										className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors shadow-md shadow-purple-900/30"
+									>
+										<FiCopy className="text-lg" /> Copy from existing
+									</button>
+								</div>
+							)}
 							<form onSubmit={handleSubmit} className="space-y-6">
 								{submitError && (
 									<div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-red-200 text-sm">
@@ -1334,6 +1716,19 @@ const ProductManagement = () => {
 								{successMessage && (
 									<div className="bg-green-900/30 border border-green-700 rounded-lg p-3 text-green-200 text-sm">
 										{successMessage}
+									</div>
+								)}
+								{/* ── Copied-from banner ── */}
+								{copiedFromProduct && !editingId && (
+									<div className="flex items-start gap-3 p-4 rounded-xl bg-blue-950/50 border border-blue-700/60 text-blue-200 text-sm">
+										<FiCopy className="text-lg text-blue-400 shrink-0 mt-0.5" />
+										<div className="flex-1">
+											<p className="font-semibold text-blue-100">All data copied from <span className="text-purple-300">&ldquo;{copiedFromProduct}&rdquo;</span></p>
+											<p className="text-xs text-blue-300 mt-0.5">Images and videos have been fetched and will be <span className="font-bold text-amber-300">re-uploaded as new files</span>.</p>
+										</div>
+										<button type="button" onClick={() => setCopiedFromProduct("")} className="text-blue-400 hover:text-white transition-colors flex-shrink-0">
+											<FiX className="w-5 h-5" />
+										</button>
 									</div>
 								)}
 
@@ -1533,6 +1928,12 @@ const ProductManagement = () => {
 											)}
 										</div>
 										<div className="md:col-span-2">
+											{/* Highlight affiliate link after metadata copy */}
+											{copiedFromProduct && !editingId && (
+												<div className="mb-2 flex items-center gap-2 text-xs text-amber-400 font-semibold animate-pulse">
+													<FiArrowDown className="text-sm" /> Ensure you update the country-specific affiliate link below
+												</div>
+											)}
 											<Input
 												label="Affiliate Link"
 												name="affiliateLink"
@@ -1845,6 +2246,13 @@ const ProductManagement = () => {
 					</div>
 				)}
 			</div>
+			{/* Copy Product Modal */}
+			{showCopyModal && (
+				<CopyProductModal
+					onSelect={applyProductTemplate}
+					onClose={() => setShowCopyModal(false)}
+				/>
+			)}
 			{/* Scheduled Products Modal */}
 			{showScheduledModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
