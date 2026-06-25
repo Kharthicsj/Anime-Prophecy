@@ -86,32 +86,86 @@ const ProductDisplayPage = () => {
 			let query = '';
 			let currentType = type;
 			const executeFetch = async (q) => {
-				const res = await apiClient.get(`/products?${q}&sort=-views&country=${encodeURIComponent(productCountry)}&limit=${limit}&page=${page}`);
+				// fetch limit + 1 so filtering out the current product still yields limit results
+				const res = await apiClient.get(`/products?${q}&sort=-views&country=${encodeURIComponent(productCountry)}&limit=${limit + 1}&page=${page}`);
 				return res.data.success ? res.data.data.products : [];
 			};
+
 			let fetched = [];
-			if (page === 1) {
-				fetched = await executeFetch(`category=${encodeURIComponent(product.category)}`);
-				currentType = 'category';
-				if (fetched.length === 0 && product.animeTag) {
-					fetched = await executeFetch(`animeTag=${encodeURIComponent(product.animeTag)}`);
-					currentType = 'anime';
+			let filtered = [];
+
+			const tryFetch = async (queryName, q) => {
+				const res = await executeFetch(q);
+				const validProducts = res.filter(p => p._id !== product._id);
+				if (validProducts.length > 0) {
+					fetched = res;
+					filtered = validProducts;
+					currentType = queryName;
+					return true;
 				}
-				if (fetched.length === 0) { fetched = await executeFetch(''); currentType = 'all'; }
+				return false;
+			};
+
+			if (page === 1) {
+				let success = false;
+				
+				// Level 1: exact match
+				let queryParts = [];
+				if (product.animeTag) queryParts.push(`animeTag=${encodeURIComponent(product.animeTag)}`);
+				if (product.category) queryParts.push(`category=${encodeURIComponent(product.category)}`);
+				if (product.subCategory) queryParts.push(`subCategory=${encodeURIComponent(product.subCategory)}`);
+				
+				if (queryParts.length > 0) {
+					success = await tryFetch('exact', queryParts.join('&'));
+				}
+
+				// Level 2: anime + category
+				if (!success && product.animeTag && product.category) {
+					success = await tryFetch('anime_category', `animeTag=${encodeURIComponent(product.animeTag)}&category=${encodeURIComponent(product.category)}`);
+				}
+
+				// Level 3: anime
+				if (!success && product.animeTag) {
+					success = await tryFetch('anime', `animeTag=${encodeURIComponent(product.animeTag)}`);
+				}
+
+				// Level 4: category
+				if (!success && product.category) {
+					success = await tryFetch('category', `category=${encodeURIComponent(product.category)}`);
+				}
+
+				// Level 5: all
+				if (!success) {
+					await tryFetch('all', '');
+				}
+
 				setRelatedSearchType(currentType);
 			} else {
-				if (currentType === 'category') query = `category=${encodeURIComponent(product.category)}`;
+				if (currentType === 'exact') {
+					let queryParts = [];
+					if (product.animeTag) queryParts.push(`animeTag=${encodeURIComponent(product.animeTag)}`);
+					if (product.category) queryParts.push(`category=${encodeURIComponent(product.category)}`);
+					if (product.subCategory) queryParts.push(`subCategory=${encodeURIComponent(product.subCategory)}`);
+					query = queryParts.join('&');
+				}
+				else if (currentType === 'anime_category') query = `animeTag=${encodeURIComponent(product.animeTag)}&category=${encodeURIComponent(product.category)}`;
 				else if (currentType === 'anime') query = `animeTag=${encodeURIComponent(product.animeTag)}`;
+				else if (currentType === 'category') query = `category=${encodeURIComponent(product.category)}`;
+				
 				fetched = await executeFetch(query);
+				filtered = fetched.filter(p => p._id !== product._id);
 			}
-			const filtered = fetched.filter(p => p._id !== product._id);
-			setHasMoreRelated(fetched.length === limit);
+
+			// We fetched (limit + 1) to account for filtering, so if fetched.length === limit + 1, we likely have more.
+			// Or if filtered.length >= limit
+			setHasMoreRelated(fetched.length > limit || filtered.length >= limit);
+			
 			if (page === 1) {
-				setRelatedProducts(filtered);
+				setRelatedProducts(filtered.slice(0, limit));
 			} else {
 				setRelatedProducts(prev => {
 					const newProducts = filtered.filter(f => !prev.find(p => p._id === f._id));
-					return [...prev, ...newProducts];
+					return [...prev, ...newProducts].slice(0, prev.length + limit);
 				});
 			}
 		} catch (err) {
