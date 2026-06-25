@@ -1147,7 +1147,8 @@ const ProductManagement = () => {
 			e.description = "Description is required";
 		if (!formData.affiliateLink.trim())
 			e.affiliateLink = "Affiliate link is required";
-		if (!formData.price || parseFloat(formData.price) <= 0)
+		const parsedPrice = parseFloat((formData.price || "").toString().replace(/,/g, ""));
+		if (!formData.price || isNaN(parsedPrice) || parsedPrice <= 0)
 			e.price = "Valid price is required";
 		if (imageItems.length === 0)
 			e.images = "At least one image is required";
@@ -1229,7 +1230,7 @@ const ProductManagement = () => {
 						? toTitleCase(customStore.trim())
 						: formData.store,
 				countries: formData.countries.filter((c) => c !== "Other"),
-				price: parseFloat(formData.price),
+				price: parseFloat(formData.price.toString().replace(/,/g, "")),
 				images: finalImages.map(({ url, publicId, isMain }) => ({ url, publicId, isMain })),
 				videos: finalVideos.map(({ url, publicId, isPrimary }) => ({ url, publicId, isPrimary })),
 				isActive: formData.isActive,
@@ -1873,9 +1874,9 @@ const ProductManagement = () => {
 											<Input
 												label="Price"
 												name="price"
-												type="number"
-												step="0.01"
-												placeholder="29.99"
+												type="text"
+												inputMode="decimal"
+												placeholder="2,999.99"
 												value={formData.price}
 												onChange={handleInputChange}
 												error={errors.price}
