@@ -30,7 +30,7 @@ export const initSocket = (server) => {
                 return next(new Error('Authentication error: No token'));
             }
             
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'your_jwt_secret_key' : ''));
             socket.userId = decoded.id;
             socket.sessionId = decoded.sessionId;
             next();

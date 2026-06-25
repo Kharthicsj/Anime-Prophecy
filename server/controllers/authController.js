@@ -12,7 +12,7 @@ import { getIO } from '../socket.js';
  * @returns {string} JWT token
  */
 const generateToken = (userId, sessionId = null) => {
-    return jwt.sign({ id: userId, role: 'admin', sessionId }, process.env.JWT_SECRET || 'your_jwt_secret_key', {
+    return jwt.sign({ id: userId, role: 'admin', sessionId }, process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'your_jwt_secret_key' : ''), {
         expiresIn: '7d',
     });
 };
@@ -175,7 +175,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
     if (token) {
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'your_jwt_secret_key' : ''));
             if (decoded.id && decoded.sessionId) {
                 await User.updateOne(
                     { _id: decoded.id },
