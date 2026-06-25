@@ -368,7 +368,7 @@ const CopyProductModal = ({ onSelect, onClose }) => {
 											{/* Price & Countries */}
 											<div className="flex items-center justify-between pt-3 border-t border-zinc-800/60">
 												<span className="text-purple-400 font-bold text-sm tracking-wide">
-													{p.currency} {p.price}
+													{p.currency} {p.price.toLocaleString(p.currency === 'INR' ? 'en-IN' : 'en-US')}
 												</span>
 												<span className="text-[10px] text-zinc-500 truncate ml-3 font-medium bg-zinc-900/80 px-2 py-1 rounded-md border border-zinc-800">
 													{(p.countries || []).join(", ")}
@@ -1623,7 +1623,7 @@ const ProductManagement = () => {
 											{/* Price */}
 											<div className="flex items-center justify-between pt-2 border-t border-zinc-800">
 												<span className="text-purple-400 font-bold">
-													{p.currency} {p.price}
+													{p.currency} {p.price.toLocaleString(p.currency === 'INR' ? 'en-IN' : 'en-US')}
 												</span>
 												<div className="flex gap-2 items-center">
 													{(!p.isActive) && (

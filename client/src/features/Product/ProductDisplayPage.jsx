@@ -479,7 +479,7 @@ const ProductDisplayPage = () => {
 									{product.currency}{" "}
 									{CURRENCY_SYMBOLS[product.currency] && (
 										<span className="mr-1.5">{CURRENCY_SYMBOLS[product.currency]}</span>
-									)}{product.price}
+									)}{product.price.toLocaleString(product.currency === 'INR' ? 'en-IN' : 'en-US')}
 								</span>
 								<p className="text-zinc-500 text-sm mt-3 font-medium">
 									Prices are dynamically updated from <span className="text-zinc-300">{product.store}</span>. Final price may vary at checkout.

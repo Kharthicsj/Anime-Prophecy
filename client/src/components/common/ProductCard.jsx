@@ -126,7 +126,7 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 						{product.currency}{" "}
 						{currencySymbol && (
 							<span className="mr-0.5">{currencySymbol}</span>
-						)}{product.price}
+						)}{product.price.toLocaleString(product.currency === 'INR' ? 'en-IN' : 'en-US')}
 					</span>
 					{!product.inStock && (
 						<span className="text-red-500 text-xs font-bold">

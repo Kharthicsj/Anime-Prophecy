@@ -422,7 +422,7 @@ const AdminProductPicker = ({
 													{p.title}
 												</p>
 												<p className="mt-0.5 text-[0.65rem] text-zinc-500">
-													{p.currency} {p.price}
+													{p.currency} {p.price.toLocaleString(p.currency === 'INR' ? 'en-IN' : 'en-US')}
 													{p.countries?.length
 														? ` · ${p.countries.join(", ")}`
 														: ""}
