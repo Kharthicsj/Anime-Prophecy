@@ -42,10 +42,10 @@ export const countries = [
     {
         value: "Worldwide",
         slug: "worldwide",
-        label: "Worldwide",
+        label: "Global Products",
         currency: "Multiple",
         isoCode: "ALL",
-        description: "Browse the full global catalog with regional coverage.",
+        description: "World wide shipping, Buy products from other countries",
     },
 ];
 

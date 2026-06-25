@@ -1,5 +1,5 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useMemo, useState, useCallback } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppContext } from "../../hooks/useAppContext";
 import apiClient from "../../services/apiClient";
 import ProductCard from "../../components/common/ProductCard";
@@ -136,7 +136,11 @@ const Homepage = () => {
 
 	useEffect(() => {
 		const handleScroll = () => {
-			if (homepageCache) homepageCache.scrollY = window.scrollY;
+			// Only record scroll if we are currently on the homepage.
+			// This prevents the ProductDisplayPage's window.scrollTo(0,0) from overwriting our saved scrollY with 0 before this component unmounts.
+			if (homepageCache && (window.location.pathname === '/' || window.location.pathname.startsWith('/country/'))) {
+				homepageCache.scrollY = window.scrollY;
+			}
 		};
 		window.addEventListener("scroll", handleScroll, { passive: true });
 		return () => window.removeEventListener("scroll", handleScroll);
@@ -146,6 +150,36 @@ const Homepage = () => {
 	// Trending carousel state
 	const [trendingHovered, setTrendingHovered] = useState(false);
 	const trendingTrackRef = useRef(null);
+
+	// JS-based Auto-scroll for trending carousel
+	useEffect(() => {
+		if (trendingHovered || trendingProducts.length === 0) return;
+		
+		let animationFrameId;
+		const track = trendingTrackRef.current;
+		if (!track) return;
+		let scrollPos = track.scrollLeft;
+		
+		const scroll = () => {
+			scrollPos += 0.8;
+			track.scrollLeft = scrollPos;
+			
+			// Sync scrollPos with actual scrollLeft if user manually scrolled or clicked a button
+			if (Math.abs(scrollPos - track.scrollLeft) > 2) {
+				scrollPos = track.scrollLeft;
+			}
+			
+			// Infinite loop: if we scrolled past the first set, snap back to start
+			if (track.scrollLeft >= track.scrollWidth / 2) {
+				track.scrollLeft = 0;
+				scrollPos = 0;
+			}
+			animationFrameId = requestAnimationFrame(scroll);
+		};
+		
+		animationFrameId = requestAnimationFrame(scroll);
+		return () => cancelAnimationFrame(animationFrameId);
+	}, [trendingHovered, trendingProducts.length]);
 
 	const sentinelRef = useRef(null);
 	const catalogRef = useRef(null);
@@ -273,6 +307,23 @@ const Homepage = () => {
 		filters: homepageCache ? homepageCache.filters : null,
 	});
 
+	const [minHeight, setMinHeight] = useState(() => {
+		if (isRestoredRef.current && homepageCache && homepageCache.scrollY > 0) {
+			return `${homepageCache.scrollY + 1200}px`;
+		}
+		return "100vh";
+	});
+
+	useEffect(() => {
+		if (minHeight !== "100vh") {
+			// After the browser natively restores scroll to our artificially tall page, we remove the artificial height
+			const timer = setTimeout(() => {
+				setMinHeight("100vh");
+			}, 600);
+			return () => clearTimeout(timer);
+		}
+	}, [minHeight]);
+
 	/* Reset & initial load on country/filter change */
 	useEffect(() => {
 		const countryChanged = lastFetchedDepsRef.current.country !== activeCountryValue;
@@ -287,11 +338,6 @@ const Homepage = () => {
 		} else {
 			if (isRestoredRef.current) {
 				isRestoredRef.current = false;
-				setTimeout(() => {
-					if (homepageCache && homepageCache.scrollY) {
-						window.scrollTo(0, homepageCache.scrollY);
-					}
-				}, 50);
 			}
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -327,7 +373,7 @@ const Homepage = () => {
 	return (
 		<div
 			style={{
-				minHeight: "100vh",
+				minHeight: minHeight,
 				background: "linear-gradient(180deg, #09090b 0%, #000 100%)",
 				color: "#fff",
 				fontFamily: "var(--font-sans, Inter, system-ui, sans-serif)",
@@ -336,18 +382,11 @@ const Homepage = () => {
 			{/* Global keyframes */}
 			<style>{`
 				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-				@keyframes trendingScroll {
-					0%   { transform: translateX(0); }
-					100% { transform: translateX(-50%); }
-				}
 				.trending-track {
 					display: flex;
 					gap: 1rem;
 					width: max-content;
-					animation: trendingScroll 28s linear infinite;
-					will-change: transform;
 				}
-				.trending-track.paused { animation-play-state: paused; }
 				.trending-nav-btn {
 					position: absolute;
 					top: 50%;
@@ -636,11 +675,7 @@ const Homepage = () => {
 									>
 										{/* Animated marquee track — duplicated for seamless loop */}
 										<div
-											className={`trending-track${trendingHovered ? " paused" : ""}`}
-											style={{
-												/* scale animation speed with item count */
-												animationDuration: `${Math.max(18, trendingProducts.length * 3.5)}s`,
-											}}
+											className="trending-track"
 										>
 											{/* Original set */}
 											{trendingProducts.map((p) => (

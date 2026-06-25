@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
-import xss from 'xss-clean';
 import connectDB from './config/database.js';
 import initCloudinary from './config/cloudinary.js';
 import { requestLogger, errorHandler } from './middlewares/auth.js';
@@ -22,12 +21,6 @@ import productSuggestionRoutes from './routes/productSuggestionRoutes.js';
 
 // Load environment variables
 dotenv.config();
-
-// Ensure JWT_SECRET is defined in production
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    console.error('FATAL ERROR: JWT_SECRET is not defined in production.');
-    process.exit(1);
-}
 
 // Initialize Express app
 const app = express();
@@ -52,7 +45,7 @@ const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, '');
 
 const corsOrigins = process.env.NODE_ENV === 'production'
     ? [process.env.CLIENT_URL, 'https://animeprophecy.onrender.com', 'https://animeprophecy.com']
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com'];
+    : ['http://localhost:5173', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com'];
 
 const allowedOrigins = new Set(
     corsOrigins
@@ -85,7 +78,7 @@ app.use(
 // Rate Limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300, // Limit each IP to 300 requests per `window` (here, per 15 minutes)
+    max: 500, // Limit each IP to 300 requests per `window` (here, per 15 minutes)
     message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes' },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -104,9 +97,6 @@ app.use(mongoSanitize());
 
 // Prevent HTTP Parameter Pollution
 app.use(hpp());
-
-// Sanitize user input against XSS
-app.use(xss());
 
 app.use(requestLogger);
 

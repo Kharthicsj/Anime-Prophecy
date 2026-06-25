@@ -6,6 +6,23 @@ import { StarIcon } from "../../components/common/Icons";
 import ProductCard from "../../components/common/ProductCard";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
 
+// Currency symbol lookup map
+const CURRENCY_SYMBOLS = {
+	USD: "$", EUR: "€", GBP: "£", JPY: "¥", INR: "₹", KRW: "₩",
+	CNY: "¥", AUD: "A$", CAD: "C$", CHF: "Fr", SEK: "kr", NOK: "kr",
+	DKK: "kr", NZD: "NZ$", SGD: "S$", HKD: "HK$", MXN: "$", BRL: "R$",
+	RUB: "₽", ZAR: "R", TRY: "₺", AED: "د.إ", SAR: "﷼", QAR: "﷼",
+	KWD: "د.ك", BHD: ".د.ب", OMR: "﷼", JOD: "JD", EGP: "£", PKR: "₨",
+	BDT: "৳", LKR: "₨", NPR: "₨", MMK: "K", THB: "฿", VND: "₫",
+	IDR: "Rp", MYR: "RM", PHP: "₱", TWD: "NT$", HUF: "Ft", PLN: "zł",
+	CZK: "Kč", RON: "lei", BGN: "лв", HRK: "kn", ISK: "kr", UAH: "₴",
+	ILS: "₪", NGN: "₦", KES: "KSh", GHS: "₵", TZS: "TSh", UGX: "USh",
+	MAD: "MAD", TND: "DT", KZT: "₸", AZN: "₼", GEL: "₾", AMD: "֏",
+	MNT: "₮", KHR: "៛", LAK: "₭", PEN: "S/.", COP: "$", ARS: "$",
+	CLP: "$", UYU: "$U", BOB: "Bs.", GTQ: "Q", CRC: "₡", PYG: "Gs",
+	TTD: "TT$", JMD: "J$", DOP: "RD$", HNL: "L", NIO: "C$",
+};
+
 const ProductDisplayPage = () => {
 	const { id } = useParams();
 	const navigate = useNavigate();
@@ -139,6 +156,20 @@ const ProductDisplayPage = () => {
 		}
 	}, [mediaIndex]);
 
+	// Support mouse wheel scrolling for the thumbnail strip on PC
+	useEffect(() => {
+		const el = thumbsRef.current;
+		if (!el) return;
+		const handleWheel = (e) => {
+			if (e.deltaY !== 0) {
+				e.preventDefault();
+				el.scrollLeft += e.deltaY;
+			}
+		};
+		el.addEventListener('wheel', handleWheel, { passive: false });
+		return () => el.removeEventListener('wheel', handleWheel);
+	}, [product]);
+
 	const handleMouseMove = (e) => {
 		if (!imageRef.current) return;
 		const { left, top, width, height } = imageRef.current.getBoundingClientRect();
@@ -161,7 +192,7 @@ const ProductDisplayPage = () => {
 		if (!lightboxOpen) return;
 		const numImages = product?.images?.length || 0;
 		const handler = (e) => {
-			if (e.key === 'ArrowLeft')  setLightboxIndex(i => Math.max(0, i - 1));
+			if (e.key === 'ArrowLeft') setLightboxIndex(i => Math.max(0, i - 1));
 			else if (e.key === 'ArrowRight') setLightboxIndex(i => Math.min(numImages - 1, i + 1));
 			else if (e.key === 'Escape') setLightboxOpen(false);
 		};
@@ -352,11 +383,10 @@ const ProductDisplayPage = () => {
 												key={i}
 												data-thumb={i}
 												onClick={() => setMediaIndex(i)}
-												className={`relative flex-shrink-0 w-[68px] h-[68px] rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-													i === mediaIndex
+												className={`relative flex-shrink-0 w-[68px] h-[68px] rounded-lg overflow-hidden border-2 transition-all duration-200 ${i === mediaIndex
 														? 'border-purple-500 shadow-md shadow-purple-500/30 scale-105'
 														: 'border-zinc-700 opacity-60 hover:opacity-100 hover:border-zinc-400'
-												}`}
+													}`}
 											>
 												{item.type === 'image' ? (
 													<img src={item.url} alt="" className="w-full h-full object-cover" />
@@ -446,7 +476,10 @@ const ProductDisplayPage = () => {
 
 							<div className="mb-10 p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl backdrop-blur-sm">
 								<span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-									{product.currency} {product.price}
+									{product.currency}{" "}
+									{CURRENCY_SYMBOLS[product.currency] && (
+										<span className="mr-1.5">{CURRENCY_SYMBOLS[product.currency]}</span>
+									)}{product.price}
 								</span>
 								<p className="text-zinc-500 text-sm mt-3 font-medium">
 									Prices are dynamically updated from <span className="text-zinc-300">{product.store}</span>. Final price may vary at checkout.
@@ -507,201 +540,201 @@ const ProductDisplayPage = () => {
 			{/* ══════════ LIGHTBOX OVERLAY ══════════ */}
 			{lightboxOpen && lightboxImages.length > 0 && (
 				<div
-				style={{
-					position: 'fixed',
-					inset: 0,
-					zIndex: 9999,
-					background: 'rgba(0,0,0,0.94)',
-					backdropFilter: 'blur(8px)',
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					animation: 'fadeInLightbox 0.2s ease',
-				}}
-				onClick={closeLightbox}
-			>
-				<style>{`
+					style={{
+						position: 'fixed',
+						inset: 0,
+						zIndex: 9999,
+						background: 'rgba(0,0,0,0.94)',
+						backdropFilter: 'blur(8px)',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						animation: 'fadeInLightbox 0.2s ease',
+					}}
+					onClick={closeLightbox}
+				>
+					<style>{`
 					@keyframes fadeInLightbox { from { opacity: 0; } to { opacity: 1; } }
 					@keyframes slideInImg { from { transform: scale(0.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 				`}</style>
 
-				{/* Close button */}
-				<button
-					onClick={closeLightbox}
-					style={{
-						position: 'absolute',
-						top: '1.25rem',
-						right: '1.25rem',
-						width: '2.5rem',
-						height: '2.5rem',
-						borderRadius: '50%',
-						border: '1px solid rgba(255,255,255,0.15)',
-						background: 'rgba(0,0,0,0.6)',
-						color: '#fff',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						cursor: 'pointer',
-						fontSize: '1.2rem',
-						zIndex: 10001,
-						backdropFilter: 'blur(4px)',
-						transition: 'background 0.2s',
-					}}
-					onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.7)'}
-					onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
-				>
-					✕
-				</button>
-
-				{/* Image counter */}
-				<div
-					style={{
-						position: 'absolute',
-						top: '1.25rem',
-						left: '50%',
-						transform: 'translateX(-50%)',
-						background: 'rgba(0,0,0,0.55)',
-						border: '1px solid rgba(255,255,255,0.1)',
-						borderRadius: '999px',
-						padding: '0.3rem 1rem',
-						color: '#e4e4e7',
-						fontSize: '0.8rem',
-						fontWeight: 600,
-						backdropFilter: 'blur(4px)',
-						zIndex: 10001,
-						letterSpacing: '0.05em',
-					}}
-				>
-					{lightboxIndex + 1} / {lightboxImages.length}
-				</div>
-
-				{/* Left arrow */}
-				{lightboxImages.length > 1 && (
+					{/* Close button */}
 					<button
-						onClick={e => { e.stopPropagation(); lightboxPrev(); }}
+						onClick={closeLightbox}
 						style={{
 							position: 'absolute',
-							left: '1.25rem',
-							top: '50%',
-							transform: 'translateY(-50%)',
-							width: '3.5rem',
-							height: '3.5rem',
-							borderRadius: '50%',
-							border: 'none',
-							background: '#fff',
-							color: '#000',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							cursor: 'pointer',
-							zIndex: 10001,
-							transition: 'all 0.2s',
-							boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-						}}
-						onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
-						onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
-					>
-						<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-						</svg>
-					</button>
-				)}
-
-				{/* Right arrow */}
-				{lightboxImages.length > 1 && (
-					<button
-						onClick={e => { e.stopPropagation(); lightboxNext(); }}
-						style={{
-							position: 'absolute',
+							top: '1.25rem',
 							right: '1.25rem',
-							top: '50%',
-							transform: 'translateY(-50%)',
-							width: '3.5rem',
-							height: '3.5rem',
+							width: '2.5rem',
+							height: '2.5rem',
 							borderRadius: '50%',
-							border: 'none',
-							background: '#fff',
-							color: '#000',
+							border: '1px solid rgba(255,255,255,0.15)',
+							background: 'rgba(0,0,0,0.6)',
+							color: '#fff',
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
 							cursor: 'pointer',
+							fontSize: '1.2rem',
 							zIndex: 10001,
-							transition: 'all 0.2s',
-							boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+							backdropFilter: 'blur(4px)',
+							transition: 'background 0.2s',
 						}}
-						onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
-						onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+						onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.7)'}
+						onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
 					>
-						<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-						</svg>
+						✕
 					</button>
-				)}
 
-				{/* Main enlarged image */}
-				<div
-					onClick={e => e.stopPropagation()}
-					style={{
-						maxWidth: 'min(90vw, 960px)',
-						maxHeight: '85vh',
-						display: 'flex',
-						flexDirection: 'column',
-						alignItems: 'center',
-						gap: '1rem',
-					}}
-				>
-					<img
-						key={lightboxIndex}
-						src={lightboxImages[lightboxIndex]?.url}
-						alt={`${product.title} — image ${lightboxIndex + 1}`}
+					{/* Image counter */}
+					<div
 						style={{
-							maxWidth: '100%',
-							maxHeight: '78vh',
-							objectFit: 'contain',
-							borderRadius: '12px',
-							boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
-							animation: 'slideInImg 0.22s ease',
-							userSelect: 'none',
+							position: 'absolute',
+							top: '1.25rem',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							background: 'rgba(0,0,0,0.55)',
+							border: '1px solid rgba(255,255,255,0.1)',
+							borderRadius: '999px',
+							padding: '0.3rem 1rem',
+							color: '#e4e4e7',
+							fontSize: '0.8rem',
+							fontWeight: 600,
+							backdropFilter: 'blur(4px)',
+							zIndex: 10001,
+							letterSpacing: '0.05em',
 						}}
-					/>
+					>
+						{lightboxIndex + 1} / {lightboxImages.length}
+					</div>
 
-					{/* Thumbnail strip inside lightbox */}
+					{/* Left arrow */}
 					{lightboxImages.length > 1 && (
-						<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-							{lightboxImages.map((img, i) => (
-								<button
-									key={i}
-									onClick={() => setLightboxIndex(i)}
-									style={{
-										width: '52px',
-										height: '52px',
-										borderRadius: '8px',
-										overflow: 'hidden',
-										border: i === lightboxIndex ? '2px solid #a855f7' : '2px solid rgba(255,255,255,0.1)',
-										opacity: i === lightboxIndex ? 1 : 0.55,
-										cursor: 'pointer',
-										padding: 0,
-										background: 'none',
-										transition: 'all 0.18s',
-										flexShrink: 0,
-									}}
-									onMouseEnter={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.85'; }}
-									onMouseLeave={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.55'; }}
-								>
-									<img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-								</button>
-							))}
-						</div>
+						<button
+							onClick={e => { e.stopPropagation(); lightboxPrev(); }}
+							style={{
+								position: 'absolute',
+								left: '1.25rem',
+								top: '50%',
+								transform: 'translateY(-50%)',
+								width: '3.5rem',
+								height: '3.5rem',
+								borderRadius: '50%',
+								border: 'none',
+								background: '#fff',
+								color: '#000',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								cursor: 'pointer',
+								zIndex: 10001,
+								transition: 'all 0.2s',
+								boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+							}}
+							onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+							onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+						>
+							<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+							</svg>
+						</button>
 					)}
 
-					{/* Keyboard hint */}
-					<p style={{ color: '#52525b', fontSize: '0.72rem', margin: 0, textAlign: 'center' }}>
-						← → to navigate &nbsp;·&nbsp; Esc to close &nbsp;·&nbsp; Click outside to dismiss
-					</p>
+					{/* Right arrow */}
+					{lightboxImages.length > 1 && (
+						<button
+							onClick={e => { e.stopPropagation(); lightboxNext(); }}
+							style={{
+								position: 'absolute',
+								right: '1.25rem',
+								top: '50%',
+								transform: 'translateY(-50%)',
+								width: '3.5rem',
+								height: '3.5rem',
+								borderRadius: '50%',
+								border: 'none',
+								background: '#fff',
+								color: '#000',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								cursor: 'pointer',
+								zIndex: 10001,
+								transition: 'all 0.2s',
+								boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+							}}
+							onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+							onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+						>
+							<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
+					)}
+
+					{/* Main enlarged image */}
+					<div
+						onClick={e => e.stopPropagation()}
+						style={{
+							maxWidth: 'min(90vw, 960px)',
+							maxHeight: '85vh',
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							gap: '1rem',
+						}}
+					>
+						<img
+							key={lightboxIndex}
+							src={lightboxImages[lightboxIndex]?.url}
+							alt={`${product.title} — image ${lightboxIndex + 1}`}
+							style={{
+								maxWidth: '100%',
+								maxHeight: '78vh',
+								objectFit: 'contain',
+								borderRadius: '12px',
+								boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
+								animation: 'slideInImg 0.22s ease',
+								userSelect: 'none',
+							}}
+						/>
+
+						{/* Thumbnail strip inside lightbox */}
+						{lightboxImages.length > 1 && (
+							<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+								{lightboxImages.map((img, i) => (
+									<button
+										key={i}
+										onClick={() => setLightboxIndex(i)}
+										style={{
+											width: '52px',
+											height: '52px',
+											borderRadius: '8px',
+											overflow: 'hidden',
+											border: i === lightboxIndex ? '2px solid #a855f7' : '2px solid rgba(255,255,255,0.1)',
+											opacity: i === lightboxIndex ? 1 : 0.55,
+											cursor: 'pointer',
+											padding: 0,
+											background: 'none',
+											transition: 'all 0.18s',
+											flexShrink: 0,
+										}}
+										onMouseEnter={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.85'; }}
+										onMouseLeave={e => { if (i !== lightboxIndex) e.currentTarget.style.opacity = '0.55'; }}
+									>
+										<img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+									</button>
+								))}
+							</div>
+						)}
+
+						{/* Keyboard hint */}
+						<p style={{ color: '#52525b', fontSize: '0.72rem', margin: 0, textAlign: 'center' }}>
+							← → to navigate &nbsp;·&nbsp; Esc to close &nbsp;·&nbsp; Click outside to dismiss
+						</p>
+					</div>
 				</div>
-			</div>
-		)}
+			)}
 		</div>
 	);
 };
