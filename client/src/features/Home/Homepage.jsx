@@ -30,9 +30,8 @@ import { FiRefreshCw, FiMap } from "react-icons/fi";
 
 const PAGE_SIZE = 20;
 
-/* ════════════════════════════════════════════════════
-   Homepage
-   ════════════════════════════════════════════════════ */
+let homepageCache = null;
+
 const Homepage = () => {
 	const navigate = useNavigate();
 	const { countrySlug } = useParams();
@@ -46,18 +45,102 @@ const Homepage = () => {
 	const activeCountryValue = countryFromRoute?.value || selectedCountry;
 	const activeCountry = getCountryByValue(activeCountryValue);
 
-	const [carouselItems, setCarouselItems] = useState([]);
-	const [trendingProducts, setTrendingProducts] = useState([]);
-	const [trendingLoading, setTrendingLoading] = useState(true);
-	const [contentLoading, setContentLoading] = useState(true);
+	const [carouselItems, setCarouselItems] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.carouselItems || [];
+		}
+		return [];
+	});
+	const [trendingProducts, setTrendingProducts] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.trendingProducts || [];
+		}
+		return [];
+	});
+	const [trendingLoading, setTrendingLoading] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.trendingLoading ?? true;
+		}
+		return true;
+	});
+	const [contentLoading, setContentLoading] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.contentLoading ?? true;
+		}
+		return true;
+	});
 
-	const [products, setProducts] = useState([]);
-	const [filters, setFilters] = useState({});
-	const [currentPage, setCurrentPage] = useState(1);
-	const [hasMore, setHasMore] = useState(true);
+	const [products, setProducts] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.products;
+		}
+		return [];
+	});
+	const [filters, setFilters] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.filters;
+		}
+		return {};
+	});
+	const [currentPage, setCurrentPage] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.currentPage;
+		}
+		return 1;
+	});
+	const [hasMore, setHasMore] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.hasMore;
+		}
+		return true;
+	});
 	const [productsLoading, setProductsLoading] = useState(false);
-	const [totalProducts, setTotalProducts] = useState(0);
+	const [totalProducts, setTotalProducts] = useState(() => {
+		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
+			return homepageCache.totalProducts;
+		}
+		return 0;
+	});
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+	const isRestoredRef = useRef(
+		!!(homepageCache && homepageCache.activeCountryValue === activeCountryValue)
+	);
+
+	useEffect(() => {
+		homepageCache = {
+			carouselItems,
+			trendingProducts,
+			trendingLoading,
+			contentLoading,
+			products,
+			filters,
+			currentPage,
+			hasMore,
+			totalProducts,
+			activeCountryValue,
+			scrollY: homepageCache ? homepageCache.scrollY : 0,
+		};
+	}, [
+		carouselItems,
+		trendingProducts,
+		trendingLoading,
+		contentLoading,
+		products,
+		filters,
+		currentPage,
+		hasMore,
+		totalProducts,
+		activeCountryValue,
+	]);
+
+	useEffect(() => {
+		const handleScroll = () => {
+			if (homepageCache) homepageCache.scrollY = window.scrollY;
+		};
+		window.addEventListener("scroll", handleScroll, { passive: true });
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
 	const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
 	// Trending carousel state
@@ -84,6 +167,7 @@ const Homepage = () => {
 	/* Fetch carousels for this region */
 	useEffect(() => {
 		const fetchContent = async () => {
+			if (isRestoredRef.current && carouselItems.length > 0) return;
 			try {
 				setContentLoading(true);
 				const iso = getCountryISOCode(activeCountry.value);
@@ -105,6 +189,7 @@ const Homepage = () => {
 	/* Admin-curated trending products for this region */
 	useEffect(() => {
 		const fetchTrending = async () => {
+			if (isRestoredRef.current && trendingProducts.length > 0) return;
 			setTrendingLoading(true);
 			try {
 				const res = await apiClient.get(
@@ -136,25 +221,25 @@ const Homepage = () => {
 					...(filters.search && { search: filters.search }),
 					...(filters.animeTag &&
 						filters.animeTag !== "All Anime" && {
-							animeTag: filters.animeTag,
-						}),
+						animeTag: filters.animeTag,
+					}),
 					...(filters.category &&
 						filters.category !== "All Categories" && {
-							category: filters.category,
-						}),
+						category: filters.category,
+					}),
 					...(filters.store &&
 						filters.store !== "All Stores" && {
-							store: filters.store,
-						}),
+						store: filters.store,
+					}),
 					...(filters.subCategory &&
 						filters.subCategory !== "All" && {
-							subCategory: filters.subCategory,
-						}),
+						subCategory: filters.subCategory,
+					}),
 					...(isWorldwide &&
 						filters.regionCountry &&
 						filters.regionCountry !== "All Countries" && {
-							regionCountry: filters.regionCountry,
-						}),
+						regionCountry: filters.regionCountry,
+					}),
 				});
 				const res = await apiClient.get(`/products?${params}`);
 				const responseData = res.data?.data;
@@ -170,7 +255,7 @@ const Homepage = () => {
 				);
 				setHasMore(
 					newProducts.length === PAGE_SIZE &&
-						newProducts.length < total,
+					newProducts.length < total,
 				);
 				setCurrentPage(page);
 			} catch (err) {
@@ -183,12 +268,32 @@ const Homepage = () => {
 		[activeCountryValue, filters, isWorldwide],
 	);
 
+	const lastFetchedDepsRef = useRef({
+		country: homepageCache ? homepageCache.activeCountryValue : null,
+		filters: homepageCache ? homepageCache.filters : null,
+	});
+
 	/* Reset & initial load on country/filter change */
 	useEffect(() => {
-		setProducts([]);
-		setCurrentPage(1);
-		setHasMore(true);
-		fetchPage(1, true);
+		const countryChanged = lastFetchedDepsRef.current.country !== activeCountryValue;
+		const filtersChanged = lastFetchedDepsRef.current.filters !== filters;
+
+		if (countryChanged || filtersChanged) {
+			lastFetchedDepsRef.current = { country: activeCountryValue, filters };
+			setProducts([]);
+			setCurrentPage(1);
+			setHasMore(true);
+			fetchPage(1, true);
+		} else {
+			if (isRestoredRef.current) {
+				isRestoredRef.current = false;
+				setTimeout(() => {
+					if (homepageCache && homepageCache.scrollY) {
+						window.scrollTo(0, homepageCache.scrollY);
+					}
+				}, 50);
+			}
+		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeCountryValue, filters]);
 
@@ -294,7 +399,7 @@ const Homepage = () => {
 					background: linear-gradient(to left, #09090b 0%, transparent 100%);
 				}
 				@media (max-width: 640px) {
-					.trending-nav-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+					.trending-nav-btn { display: none; }
 					.trending-viewport::before, .trending-viewport::after { width: 32px; }
 				}
 			`}</style>
@@ -414,9 +519,9 @@ const Homepage = () => {
 				</div>
 			</section>
 
-			<SuggestProductModal 
-				isOpen={isSuggestionModalOpen} 
-				onClose={() => setIsSuggestionModalOpen(false)} 
+			<SuggestProductModal
+				isOpen={isSuggestionModalOpen}
+				onClose={() => setIsSuggestionModalOpen(false)}
 				defaultCountry={activeCountryValue}
 			/>
 

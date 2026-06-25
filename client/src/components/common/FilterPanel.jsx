@@ -381,17 +381,7 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 			</div>
 
 			{/* Filter dropdowns */}
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: cols <= 2
-						? "1fr"
-						: cols <= 3
-							? "repeat(2, 1fr)"
-							: `repeat(${Math.min(cols, 3)}, 1fr)`,
-					gap: "0.75rem",
-				}}
-			>
+			<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
 				{showCountryFilter && (
 					<SearchableDropdown
 						label="Country"
