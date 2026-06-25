@@ -120,13 +120,13 @@ export const getProductById = asyncHandler(async (req, res) => {
     // Deduplicate views: one view per IP per product per session/day
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
     const viewKey = `view_${ip}_${req.params.id}`;
-    
+
     if (!global._viewCache) global._viewCache = new Set();
-    
+
     if (!global._viewCache.has(viewKey)) {
         global._viewCache.add(viewKey);
         if (global._viewCache.size > 50000) global._viewCache.clear();
-        
+
         // Increment view count
         product.views += 1;
         await product.save({ validateBeforeSave: false });
@@ -153,7 +153,7 @@ export const trackProductClick = asyncHandler(async (req, res) => {
 
     if (!global._clickRateLimit) global._clickRateLimit = new Map();
     let rateData = global._clickRateLimit.get(ip);
-    
+
     if (!rateData) {
         rateData = { timestamps: [], blockedUntil: 0 };
         global._clickRateLimit.set(ip, rateData);
@@ -194,7 +194,7 @@ export const trackProductBuyNowClick = asyncHandler(async (req, res) => {
 
     if (!global._buyNowRateLimit) global._buyNowRateLimit = new Map();
     let rateData = global._buyNowRateLimit.get(ip);
-    
+
     if (!rateData) {
         rateData = { timestamps: [], blockedUntil: 0 };
         global._buyNowRateLimit.set(ip, rateData);
@@ -513,6 +513,33 @@ export const getProductAnalytics = asyncHandler(async (req, res) => {
             productsByCategory,
             productsByAnime,
         },
+    });
+});
+
+/**
+ * Get lean product records for admin analytics dashboard charts
+ * @route GET /api/products/analytics/products
+ * @access Private/Admin
+ */
+export const getAnalyticsProducts = asyncHandler(async (req, res) => {
+    const filter = {
+        isActive: true,
+        $or: [
+            { scheduledUploadTime: null },
+            { scheduledUploadTime: { $lte: new Date() } },
+        ],
+    };
+
+    const products = await Product.find(filter)
+        .select(
+            'title animeTag category subCategory store countries price inStock views clicks buyNowClicks images',
+        )
+        .sort({ views: -1 })
+        .lean();
+
+    res.json({
+        success: true,
+        data: { products },
     });
 });
 

@@ -7,6 +7,7 @@ import {
     updateProduct,
     deleteProduct,
     getProductAnalytics,
+    getAnalyticsProducts,
     getGlobalSettings,
     updateGlobalSettings,
     trackProductClick,
@@ -31,6 +32,13 @@ router.get('/admin/all', verifyToken, isAdmin, getAllProductsAdmin);
  * @access Private/Admin
  */
 router.get('/analytics/stats', verifyToken, isAdmin, getProductAnalytics);
+
+/**
+ * @route GET /api/products/analytics/products
+ * @desc Get all active products for admin analytics charts
+ * @access Private/Admin
+ */
+router.get('/analytics/products', verifyToken, isAdmin, getAnalyticsProducts);
 
 /**
  * @route GET /api/products

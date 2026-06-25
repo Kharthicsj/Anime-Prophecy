@@ -56,10 +56,13 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 			{/* Image Container */}
 			<div className="relative overflow-hidden bg-zinc-800 aspect-square w-full">
 				<img
-					src={mainImage?.url || "placeholder.jpg"}
+					src={mainImage?.url || "/placeholder.jpg"}
 					alt={product.title}
 					className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
 					loading="lazy"
+					onError={(e) => {
+						e.target.style.display = "none";
+					}}
 				/>
 
 				{/* Badges Container */}

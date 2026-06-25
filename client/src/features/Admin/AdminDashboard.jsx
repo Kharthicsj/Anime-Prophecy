@@ -5,6 +5,7 @@ import apiClient from "../../services/apiClient";
 import NewsletterPanel from "./NewsletterPanel";
 import SecurityPanel from "./SecurityPanel";
 import SuggestionManagement from "./SuggestionManagement";
+import AnalyticsPanel from "./analytics/AnalyticsPanel";
 
 /* ─── Icons (inline SVG) ─── */
 const Icon = ({ d, size = 20 }) => (
@@ -57,55 +58,6 @@ const NAV_ITEMS = [
 	{ id: "security", label: "Security", Icon: IcShield },
 ];
 
-/* ─── Stat card ─── */
-const StatCard = ({ label, value, sub, accent }) => (
-	<div
-		style={{
-			background: "rgba(24,24,27,0.7)",
-			border: "1px solid #27272a",
-			borderRadius: "14px",
-			padding: "1.5rem",
-			position: "relative",
-			overflow: "hidden",
-		}}
-	>
-		<div
-			style={{
-				position: "absolute",
-				top: 0,
-				left: 0,
-				right: 0,
-				height: "2px",
-				background: accent,
-				borderRadius: "14px 14px 0 0",
-			}}
-		/>
-		<p
-			style={{
-				margin: "0 0 0.5rem",
-				fontSize: "0.75rem",
-				color: "#71717a",
-				letterSpacing: "0.1em",
-				textTransform: "uppercase",
-			}}
-		>
-			{label}
-		</p>
-		<p
-			style={{
-				margin: "0 0 0.25rem",
-				fontSize: "2rem",
-				fontWeight: 800,
-				color: "#fff",
-			}}
-		>
-			{value ?? "—"}
-		</p>
-		<p style={{ margin: 0, fontSize: "0.75rem", color: "#52525b" }}>
-			{sub}
-		</p>
-	</div>
-);
 
 /* ─── Quick action card ─── */
 const ActionCard = ({ label, desc, onClick, Icon: Ic }) => {
@@ -679,104 +631,18 @@ const AdminDashboard = () => {
 				</aside>
 
 				{/* Main content */}
-				<main style={{ flex: 1, overflowY: "auto", padding: "2rem" }}>
+				<main style={{ flex: 1, overflowY: "auto", padding: "1.75rem 2rem" }}>
 					{/* ── Overview Tab ── */}
 					{activeTab === "overview" && (
-						<div style={{ maxWidth: "900px" }}>
-							<div style={{ marginBottom: "2rem" }}>
-								<h2
-									style={{
-										margin: "0 0 0.25rem",
-										fontSize: "1.5rem",
-										fontWeight: 800,
-										color: "#fff",
-									}}
-								>
-									Dashboard Overview
-								</h2>
-								<p
-									style={{
-										margin: 0,
-										color: "#71717a",
-										fontSize: "0.9rem",
-									}}
-								>
-									Your Prophecy Hub at a glance.
-								</p>
-							</div>
-
-							{/* Stat cards */}
-							<div
-								style={{
-									display: "grid",
-									gridTemplateColumns:
-										"repeat(auto-fill, minmax(200px, 1fr))",
-									gap: "1rem",
-									marginBottom: "2.5rem",
-								}}
-							>
-								<StatCard
-									label="Total Products"
-									value={
-										loading
-											? "…"
-											: (analytics?.totalProducts ?? 0)
-									}
-									sub="Active listings"
-									accent="linear-gradient(90deg, #a855f7, #7c3aed)"
-								/>
-								<StatCard
-									label="Total Views"
-									value={
-										loading
-											? "…"
-											: (analytics?.totalViews ?? 0)
-									}
-									sub="Page impressions"
-									accent="linear-gradient(90deg, #3b82f6, #06b6d4)"
-								/>
-								<StatCard
-									label="Total Clicks"
-									value={
-										loading
-											? "…"
-											: (analytics?.totalClicks ?? 0)
-									}
-									sub="Product card clicks"
-									accent="linear-gradient(90deg, #f59e0b, #ef4444)"
-								/>
-								<StatCard
-									label="Buy Now Clicks"
-									value={
-										loading
-											? "…"
-											: (analytics?.totalBuyNowClicks ?? 0)
-									}
-									sub="Affiliate link clicks"
-									accent="linear-gradient(90deg, #10b981, #3b82f6)"
-								/>
-							</div>
+						<div className="mx-auto w-full max-w-[1400px] space-y-10">
+							<AnalyticsPanel />
 
 							{/* Quick actions */}
-							<div style={{ marginBottom: "2.5rem" }}>
-								<h3
-									style={{
-										margin: "0 0 1rem",
-										fontSize: "1rem",
-										fontWeight: 700,
-										color: "#fff",
-									}}
-								>
+							<div>
+								<h3 className="mb-4 border-b border-zinc-800/60 pb-3 text-sm font-semibold text-zinc-200">
 									Quick Actions
 								</h3>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns:
-											"repeat(auto-fill, minmax(260px, 1fr))",
-										gap: "0.75rem",
-									}}
-								>
+								<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 									<ActionCard
 										label="Manage Products"
 										desc="Add, edit, or remove product listings"
@@ -819,184 +685,6 @@ const AdminDashboard = () => {
 									/>
 								</div>
 							</div>
-
-							{/* Products by Category */}
-							{analytics?.productsByCategory?.length > 0 && (
-								<div
-									style={{
-										background: "rgba(24,24,27,0.7)",
-										border: "1px solid #27272a",
-										borderRadius: "14px",
-										padding: "1.5rem",
-										marginBottom: "1.5rem",
-									}}
-								>
-									<h3
-										style={{
-											margin: "0 0 1.25rem",
-											fontSize: "1rem",
-											fontWeight: 700,
-											color: "#fff",
-										}}
-									>
-										Products by Category
-									</h3>
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: "0.75rem",
-										}}
-									>
-										{analytics.productsByCategory.map(
-											(cat) => {
-												const pct = Math.round(
-													(cat.count /
-														(analytics.totalProducts ||
-															1)) *
-														100,
-												);
-												return (
-													<div
-														key={cat._id}
-														style={{
-															display: "flex",
-															alignItems:
-																"center",
-															gap: "1rem",
-														}}
-													>
-														<span
-															style={{
-																width: "120px",
-																fontSize:
-																	"0.82rem",
-																color: "#a1a1aa",
-																flexShrink: 0,
-																textOverflow:
-																	"ellipsis",
-																overflow:
-																	"hidden",
-																whiteSpace:
-																	"nowrap",
-															}}
-														>
-															{cat._id}
-														</span>
-														<div
-															style={{
-																flex: 1,
-																height: "6px",
-																background:
-																	"#1c1c1f",
-																borderRadius:
-																	"999px",
-																overflow:
-																	"hidden",
-															}}
-														>
-															<div
-																style={{
-																	width: `${pct}%`,
-																	height: "100%",
-																	borderRadius:
-																		"999px",
-																	background:
-																		"linear-gradient(90deg, #7c3aed, #a855f7)",
-																	transition:
-																		"width 0.6s ease",
-																}}
-															/>
-														</div>
-														<span
-															style={{
-																width: "36px",
-																textAlign:
-																	"right",
-																fontSize:
-																	"0.82rem",
-																color: "#c4b5fd",
-																fontWeight: 600,
-																flexShrink: 0,
-															}}
-														>
-															{cat.count}
-														</span>
-													</div>
-												);
-											},
-										)}
-									</div>
-								</div>
-							)}
-
-							{/* Products by Anime */}
-							{analytics?.productsByAnime?.length > 0 && (
-								<div
-									style={{
-										background: "rgba(24,24,27,0.7)",
-										border: "1px solid #27272a",
-										borderRadius: "14px",
-										padding: "1.5rem",
-									}}
-								>
-									<h3
-										style={{
-											margin: "0 0 1.25rem",
-											fontSize: "1rem",
-											fontWeight: 700,
-											color: "#fff",
-										}}
-									>
-										Products by Anime
-									</h3>
-									<div
-										style={{
-											display: "grid",
-											gridTemplateColumns:
-												"repeat(auto-fill, minmax(130px,1fr))",
-											gap: "0.75rem",
-										}}
-									>
-										{analytics.productsByAnime.map(
-											(anime) => (
-												<div
-													key={anime._id}
-													style={{
-														background:
-															"rgba(9,9,11,0.6)",
-														border: "1px solid #27272a",
-														borderRadius: "10px",
-														padding: "1rem",
-														textAlign: "center",
-													}}
-												>
-													<p
-														style={{
-															margin: "0 0 0.4rem",
-															fontWeight: 700,
-															fontSize: "0.82rem",
-															color: "#c4b5fd",
-														}}
-													>
-														{anime._id}
-													</p>
-													<p
-														style={{
-															margin: 0,
-															fontSize: "1.5rem",
-															fontWeight: 800,
-															color: "#fff",
-														}}
-													>
-														{anime.count}
-													</p>
-												</div>
-											),
-										)}
-									</div>
-								</div>
-							)}
 						</div>
 					)}
 
