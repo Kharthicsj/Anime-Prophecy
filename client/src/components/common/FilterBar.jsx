@@ -22,6 +22,12 @@ const FilterBar = ({
 	selectedFilters = {},
 	className = "",
 }) => {
+	const [localFilters, setLocalFilters] = useState(selectedFilters);
+
+	useEffect(() => {
+		setLocalFilters(selectedFilters);
+	}, [selectedFilters]);
+
 	// ── Dynamic options from DB ──────────────────────────────────────────────
 	const [dynamicOptions, setDynamicOptions] = useState({
 		animeTags: [],
@@ -76,24 +82,33 @@ const FilterBar = ({
 		{ label: "Scheduled", value: "Scheduled" }
 	];
 
-	const handleFilterChange = (filterType, value) => {
-		onFilterChange({
-			...selectedFilters,
-			[filterType]: value,
-		});
+	const handleLocalFilterChange = (filterType, value) => {
+		const updated = { ...localFilters };
+		if (Array.isArray(value)) {
+			updated[filterType] = value.join(',');
+			if (value.length === 0) {
+				delete updated[filterType];
+			}
+		} else {
+			updated[filterType] = value;
+		}
+		setLocalFilters(updated);
 	};
 
-	const [localSearch, setLocalSearch] = useState(selectedFilters.search || "");
+	const applyFilters = () => {
+		onFilterChange(localFilters);
+	};
+
+	const [localSearch, setLocalSearch] = useState(localFilters.search || "");
 
 	useEffect(() => {
-		setLocalSearch(selectedFilters.search || "");
-	}, [selectedFilters.search]);
+		setLocalSearch(localFilters.search || "");
+	}, [localFilters.search]);
 
 	const triggerSearch = () => {
-		onFilterChange({
-			...selectedFilters,
-			search: localSearch,
-		});
+		const updated = { ...localFilters, search: localSearch };
+		setLocalFilters(updated);
+		onFilterChange(updated);
 	};
 
 	return (
@@ -116,40 +131,53 @@ const FilterBar = ({
 			<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
 				<SearchableDropdown
 					label="Sort By"
-					value={selectedFilters.sort || "-createdAt"}
-					onChange={(v) => handleFilterChange("sort", v)}
+					value={localFilters.sort || "-createdAt"}
+					onChange={(v) => handleLocalFilterChange("sort", v)}
 					options={sortOptions}
 				/>
 				<SearchableDropdown
 					label="Category"
-					value={selectedFilters.category || "All Categories"}
-					onChange={(v) => handleFilterChange("category", v)}
+					value={localFilters.category || "All Categories"}
+					onChange={(v) => handleLocalFilterChange("category", v)}
 					options={categoryOptions}
+					isMulti
 				/>
 				<SearchableDropdown
 					label="Anime"
-					value={selectedFilters.animeTag || "All Anime"}
-					onChange={(v) => handleFilterChange("animeTag", v)}
+					value={localFilters.animeTag || "All Anime"}
+					onChange={(v) => handleLocalFilterChange("animeTag", v)}
 					options={animeOptions}
+					isMulti
 				/>
 				<SearchableDropdown
 					label="Store"
-					value={selectedFilters.store || "All Stores"}
-					onChange={(v) => handleFilterChange("store", v)}
+					value={localFilters.store || "All Stores"}
+					onChange={(v) => handleLocalFilterChange("store", v)}
 					options={storeOptions}
+					isMulti
 				/>
 				<SearchableDropdown
 					label="Country"
-					value={selectedFilters.country || "All Countries"}
-					onChange={(v) => handleFilterChange("country", v)}
+					value={localFilters.country || "All Countries"}
+					onChange={(v) => handleLocalFilterChange("country", v)}
 					options={countryOptions}
+					isMulti
 				/>
 				<SearchableDropdown
 					label="Status"
-					value={selectedFilters.status || "All Statuses"}
-					onChange={(v) => handleFilterChange("status", v)}
+					value={localFilters.status || "All Statuses"}
+					onChange={(v) => handleLocalFilterChange("status", v)}
 					options={statusOptions}
 				/>
+			</div>
+
+			<div className="flex justify-end mt-4">
+				<button
+					onClick={applyFilters}
+					className="bg-purple-600 hover:bg-purple-700 text-white border-none py-2 px-6 rounded-lg text-sm font-semibold cursor-pointer transition-colors shadow-[0_4px_14px_rgba(124,58,237,0.3)]"
+				>
+					Apply Filters
+				</button>
 			</div>
 
 			{/* Active Filters Display */}
@@ -173,7 +201,11 @@ const FilterBar = ({
 										{key}: {value}
 									</span>
 									<button
-										onClick={() => handleFilterChange(key, undefined)}
+										onClick={() => {
+											const updated = { ...selectedFilters };
+											delete updated[key];
+											onFilterChange(updated);
+										}}
 										className="hover:text-purple-400 cursor-pointer"
 									>
 										✕

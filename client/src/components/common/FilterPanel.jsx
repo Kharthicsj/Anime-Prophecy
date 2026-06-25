@@ -21,29 +21,36 @@ const SUB_CATEGORY_MAP = {
 };
 
 /* ─── SearchableDropdown ───────────────────────────────────────────────────── */
-/**
- * A custom searchable dropdown that mirrors the admin panel style.
- * Renders a text input that filters the option list; selecting an option
- * fires onChange with the chosen value.
- */
-export const SearchableDropdown = ({ label, value, options, onChange, accentColor = "#a855f7" }) => {
+export const SearchableDropdown = ({ label, value, options, onChange, accentColor = "#a855f7", isMulti = false }) => {
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const containerRef = useRef(null);
 	const inputRef = useRef(null);
 
-	// Derive the display label for the current value
-	const currentLabel = typeof options[0] === "object"
-		? (options.find(o => o.value === value)?.label ?? value)
+	const selectedValues = isMulti 
+		? (Array.isArray(value) ? value : (value && value !== options[0]?.value ? value.split(',') : []))
 		: value;
 
-	// Filter options based on search query
+	let currentLabel;
+	if (isMulti) {
+		if (selectedValues.length === 0) {
+			currentLabel = options[0]?.label || "All";
+		} else if (selectedValues.length === 1) {
+			currentLabel = typeof options[0] === "object" ? (options.find(o => o.value === selectedValues[0])?.label ?? selectedValues[0]) : selectedValues[0];
+		} else {
+			currentLabel = `${selectedValues.length} Selected`;
+		}
+	} else {
+		currentLabel = typeof options[0] === "object"
+			? (options.find(o => o.value === value)?.label ?? value)
+			: value;
+	}
+
 	const filtered = options.filter(o => {
 		const lbl = typeof o === "object" ? o.label : o;
 		return lbl.toLowerCase().includes(query.toLowerCase());
 	});
 
-	// Close on outside click
 	useEffect(() => {
 		const handler = (e) => {
 			if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -62,9 +69,24 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 	};
 
 	const handleSelect = (optVal) => {
-		onChange(optVal);
-		setOpen(false);
-		setQuery("");
+		if (isMulti) {
+			if (optVal === options[0]?.value) {
+				onChange([]);
+				setOpen(false);
+			} else {
+				let newValues;
+				if (selectedValues.includes(optVal)) {
+					newValues = selectedValues.filter(v => v !== optVal);
+				} else {
+					newValues = [...selectedValues, optVal];
+				}
+				onChange(newValues.length > 0 ? newValues : []);
+			}
+		} else {
+			onChange(optVal);
+			setOpen(false);
+			setQuery("");
+		}
 	};
 
 	const dropdownStyle = {
@@ -87,7 +109,6 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 					{label}
 				</label>
 			)}
-			{/* Trigger button */}
 			<button
 				type="button"
 				onClick={handleOpen}
@@ -122,7 +143,6 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 
 			{open && (
 				<div style={dropdownStyle}>
-					{/* Search input */}
 					<div style={{ padding: "8px", borderBottom: "1px solid #27272a" }}>
 						<div style={{ position: "relative" }}>
 							<svg
@@ -157,7 +177,6 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 							/>
 						</div>
 					</div>
-					{/* Options list */}
 					<ul style={{ maxHeight: "200px", overflowY: "auto", margin: 0, padding: "4px", listStyle: "none" }}>
 						{filtered.length === 0 ? (
 							<li style={{ padding: "8px 12px", color: "#52525b", fontSize: "0.78rem", textAlign: "center" }}>
@@ -166,11 +185,14 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 						) : filtered.map((o, i) => {
 							const optVal = typeof o === "object" ? o.value : o;
 							const optLbl = typeof o === "object" ? o.label : o;
-							const isSelected = optVal === value;
+							const isSelected = isMulti ? (optVal === options[0]?.value ? selectedValues.length === 0 : selectedValues.includes(optVal)) : optVal === value;
 							return (
 								<li
 									key={i}
-									onClick={() => handleSelect(optVal)}
+									onClick={(e) => {
+										e.preventDefault();
+										handleSelect(optVal);
+									}}
 									style={{
 										padding: "7px 12px",
 										borderRadius: "6px",
@@ -189,10 +211,20 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 									onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
 								>
 									{optLbl}
-									{isSelected && (
-										<svg width="13" height="13" fill="none" stroke={accentColor} viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-										</svg>
+									{isMulti ? (
+										<div style={{
+											width: "16px", height: "16px", border: `1px solid ${isSelected ? accentColor : "#52525b"}`,
+											borderRadius: "3px", background: isSelected ? accentColor : "transparent",
+											display: "flex", alignItems: "center", justifyContent: "center"
+										}}>
+											{isSelected && <svg width="10" height="10" fill="none" stroke="#fff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+										</div>
+									) : (
+										isSelected && (
+											<svg width="13" height="13" fill="none" stroke={accentColor} viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+											</svg>
+										)
 									)}
 								</li>
 							);
@@ -209,7 +241,12 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter = false }) => {
 	const sortOptions = PICKER_SORT_OPTIONS;
 
-	// Dynamic options fetched from DB (merged with static lists)
+	const [localFilters, setLocalFilters] = useState(selectedFilters);
+
+	useEffect(() => {
+		setLocalFilters(selectedFilters);
+	}, [selectedFilters]);
+
 	const [dynamicOptions, setDynamicOptions] = useState({
 		animeTags: [],
 		categories: [],
@@ -230,23 +267,25 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 					countries: d.countries || [],
 				});
 			} catch {
-				// silently fallback to static lists
 			}
 		};
 		fetchMeta();
 	}, []);
 
-	const selectedCategory = selectedFilters.category || "All Categories";
+	const selectedCategoryRaw = localFilters.category || "All Categories";
+	const selectedCategories = Array.isArray(selectedCategoryRaw) ? selectedCategoryRaw : (selectedCategoryRaw && selectedCategoryRaw !== "All Categories" ? selectedCategoryRaw.split(',') : []);
+	
+	const firstSelectedCategory = selectedCategories.length > 0 ? selectedCategories[0] : "All Categories";
 
 	useEffect(() => {
-		if (selectedCategory === "All Categories") {
+		if (firstSelectedCategory === "All Categories") {
 			setCategorySubCategories([]);
 			return;
 		}
 		const fetchSubCategories = async () => {
 			try {
 				const res = await apiClient.get(
-					`/products/meta/filters?category=${encodeURIComponent(selectedCategory)}`,
+					`/products/meta/filters?category=${encodeURIComponent(firstSelectedCategory)}`,
 				);
 				setCategorySubCategories(res.data?.data?.subCategories || []);
 			} catch {
@@ -254,9 +293,8 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 			}
 		};
 		fetchSubCategories();
-	}, [selectedCategory]);
+	}, [firstSelectedCategory]);
 
-	// Merge static + dynamic for each filter (deduplicated)
 	const staticAnime = ANIME_FILTER_OPTIONS.filter(v => v !== "All Anime");
 	const staticCategory = CATEGORY_FILTER_OPTIONS.filter(v => v !== "All Categories");
 	const staticStore = STORE_FILTER_OPTIONS.filter(v => v !== "All Stores");
@@ -290,39 +328,59 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 		...customCountries.map(v => ({ value: v, label: v })),
 	];
 
-	// Sub-category options: static map for selected category + dynamic extras from DB
-	const staticSubCatList = SUB_CATEGORY_MAP[selectedCategory] || [];
+	let staticSubCatList = [];
+	if (selectedCategories.length > 0) {
+		selectedCategories.forEach(cat => {
+			if (SUB_CATEGORY_MAP[cat]) {
+				staticSubCatList = [...staticSubCatList, ...SUB_CATEGORY_MAP[cat]];
+			}
+		});
+	}
+	
 	const dynamicSubCatExtras = categorySubCategories.filter(
 		v => !staticSubCatList.includes(v) && v !== ""
 	);
-	const showSubCategory = selectedCategory !== "All Categories";
+	const showSubCategory = selectedCategories.length > 0;
 	const subCategoryOptions = [
-		{ value: "All", label: `All ${selectedCategory}` },
+		{ value: "All", label: `All Sub Categories` },
 		...mergeUnique(staticSubCatList, dynamicSubCatExtras).map(v => ({ value: v, label: v })),
 	];
 
-	// Sort options (plain label-value pairs)
 	const sortDropdownOptions = sortOptions.map(o => ({ value: o.value, label: o.label }));
 
-	const handleFilterChange = (filterType, value) => {
-		const updated = { ...selectedFilters, [filterType]: value };
-		if (filterType === "category") updated.subCategory = "All";
-		onFilterChange(updated);
+	const handleLocalFilterChange = (filterType, value) => {
+		const updated = { ...localFilters };
+		if (Array.isArray(value)) {
+			updated[filterType] = value.join(',');
+			if (value.length === 0) {
+				delete updated[filterType];
+			}
+		} else {
+			updated[filterType] = value;
+		}
+		
+		if (filterType === "category") {
+			delete updated.subCategory;
+		}
+		setLocalFilters(updated);
 	};
 
-	// Active filter count badge
-	const activeCount = [
-		selectedFilters.animeTag && selectedFilters.animeTag !== "All Anime",
-		selectedFilters.store && selectedFilters.store !== "All Stores",
-		selectedFilters.category && selectedFilters.category !== "All Categories",
-		selectedFilters.subCategory && selectedFilters.subCategory !== "All",
-		showCountryFilter && selectedFilters.regionCountry && selectedFilters.regionCountry !== "All Countries",
-	].filter(Boolean).length;
+	const applyFilters = () => {
+		onFilterChange(localFilters);
+	};
 
-	// Dynamic grid columns
-	let cols = 4;
-	if (showCountryFilter) cols++;
-	if (showSubCategory) cols++;
+	const clearAll = () => {
+		setLocalFilters({});
+		onFilterChange({});
+	};
+
+	const activeCount = [
+		localFilters.animeTag && localFilters.animeTag !== "All Anime",
+		localFilters.store && localFilters.store !== "All Stores",
+		localFilters.category && localFilters.category !== "All Categories",
+		localFilters.subCategory && localFilters.subCategory !== "All",
+		showCountryFilter && localFilters.regionCountry && localFilters.regionCountry !== "All Countries",
+	].filter(Boolean).length;
 
 	return (
 		<div
@@ -334,7 +392,6 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 				backdropFilter: "blur(8px)",
 			}}
 		>
-			{/* Header row */}
 			<div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
 				<ChevronDownIcon className="h-4 w-4 text-purple-400" />
 				<span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#fff", letterSpacing: "0.15em", textTransform: "uppercase" }}>
@@ -359,7 +416,7 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 				)}
 				{activeCount > 0 && (
 					<button
-						onClick={() => onFilterChange({})}
+						onClick={clearAll}
 						style={{
 							marginLeft: "auto",
 							fontSize: "0.72rem",
@@ -380,54 +437,80 @@ const FilterPanel = ({ onFilterChange, selectedFilters = {}, showCountryFilter =
 				)}
 			</div>
 
-			{/* Filter dropdowns */}
 			<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
 				{showCountryFilter && (
 					<SearchableDropdown
 						label="Country"
-						value={selectedFilters.regionCountry || "All Countries"}
+						value={localFilters.regionCountry || "All Countries"}
 						options={countryOptions}
-						onChange={v => handleFilterChange("regionCountry", v)}
+						onChange={v => handleLocalFilterChange("regionCountry", v)}
+						isMulti
 					/>
 				)}
 
 				<SearchableDropdown
 					label="Anime"
-					value={selectedFilters.animeTag || "All Anime"}
+					value={localFilters.animeTag || "All Anime"}
 					options={animeOptions}
-					onChange={v => handleFilterChange("animeTag", v)}
+					onChange={v => handleLocalFilterChange("animeTag", v)}
+					isMulti
 				/>
 
 				<SearchableDropdown
 					label="Store"
-					value={selectedFilters.store || "All Stores"}
+					value={localFilters.store || "All Stores"}
 					options={storeOptions}
-					onChange={v => handleFilterChange("store", v)}
+					onChange={v => handleLocalFilterChange("store", v)}
+					isMulti
 				/>
 
 				<SearchableDropdown
 					label="Category"
-					value={selectedFilters.category || "All Categories"}
+					value={localFilters.category || "All Categories"}
 					options={categoryOptions}
-					onChange={v => handleFilterChange("category", v)}
+					onChange={v => handleLocalFilterChange("category", v)}
+					isMulti
 				/>
 
 				{showSubCategory && (
 					<SearchableDropdown
 						label={<span style={{ color: "#c4b5fd" }}>Sub Category <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed", display: "inline-block", verticalAlign: "middle" }} /></span>}
-						value={selectedFilters.subCategory || "All"}
+						value={localFilters.subCategory || "All"}
 						options={subCategoryOptions}
-						onChange={v => handleFilterChange("subCategory", v)}
+						onChange={v => handleLocalFilterChange("subCategory", v)}
 						accentColor="#8b5cf6"
+						isMulti
 					/>
 				)}
 
 				<SearchableDropdown
 					label="Sort By"
-					value={selectedFilters.sort || "newest"}
+					value={localFilters.sort || "newest"}
 					options={sortDropdownOptions}
-					onChange={v => handleFilterChange("sort", v)}
+					onChange={v => handleLocalFilterChange("sort", v)}
 				/>
+			</div>
+
+			<div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.25rem" }}>
+				<button
+					onClick={applyFilters}
+					style={{
+						background: "#7c3aed",
+						color: "#fff",
+						border: "none",
+						padding: "0.6rem 1.5rem",
+						borderRadius: "8px",
+						fontSize: "0.85rem",
+						fontWeight: 600,
+						cursor: "pointer",
+						transition: "background 0.2s",
+						boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
+					}}
+					onMouseEnter={e => e.currentTarget.style.background = "#6d28d9"}
+					onMouseLeave={e => e.currentTarget.style.background = "#7c3aed"}
+				>
+					Apply Filters
+				</button>
 			</div>
 		</div>
 	);

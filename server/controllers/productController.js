@@ -35,9 +35,10 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
     if (country === 'Worldwide') {
         if (regionCountry && regionCountry !== 'All Countries') {
+            const regionCountriesArr = regionCountry.split(',');
             filter.$and.push({
                 $or: [
-                    { countries: regionCountry },
+                    { countries: { $in: regionCountriesArr } },
                     { countries: 'Worldwide' },
                 ],
             });
@@ -52,19 +53,19 @@ export const getAllProducts = asyncHandler(async (req, res) => {
     }
 
     if (animeTag && animeTag !== 'All Anime') {
-        filter.animeTag = animeTag;
+        filter.animeTag = { $in: animeTag.split(',') };
     }
 
     if (store && store !== 'All Stores') {
-        filter.store = store;
+        filter.store = { $in: store.split(',') };
     }
 
     if (category && category !== 'All Categories') {
-        filter.category = category;
+        filter.category = { $in: category.split(',') };
     }
 
     if (req.query.subCategory && req.query.subCategory !== 'All') {
-        filter.subCategory = req.query.subCategory;
+        filter.subCategory = { $in: req.query.subCategory.split(',') };
     }
 
     if (search?.trim()) {
@@ -265,19 +266,19 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
     }
 
     if (animeTag && animeTag !== 'All Anime') {
-        filter.animeTag = animeTag;
+        filter.animeTag = { $in: animeTag.split(',') };
     }
 
     if (store && store !== 'All Stores') {
-        filter.store = store;
+        filter.store = { $in: store.split(',') };
     }
 
     if (category && category !== 'All Categories') {
-        filter.category = category;
+        filter.category = { $in: category.split(',') };
     }
 
     if (subCategory && subCategory !== 'All') {
-        filter.subCategory = subCategory;
+        filter.subCategory = { $in: subCategory.split(',') };
     }
 
     if (search?.trim()) {
