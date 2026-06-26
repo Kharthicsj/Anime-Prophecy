@@ -154,21 +154,21 @@ const Homepage = () => {
 	// JS-based Auto-scroll for trending carousel
 	useEffect(() => {
 		if (trendingHovered || trendingProducts.length === 0) return;
-		
+
 		let animationFrameId;
 		const track = trendingTrackRef.current;
 		if (!track) return;
 		let scrollPos = track.scrollLeft;
-		
+
 		const scroll = () => {
 			scrollPos += 0.8;
 			track.scrollLeft = scrollPos;
-			
+
 			// Sync scrollPos with actual scrollLeft if user manually scrolled or clicked a button
 			if (Math.abs(scrollPos - track.scrollLeft) > 2) {
 				scrollPos = track.scrollLeft;
 			}
-			
+
 			// Infinite loop: if we scrolled past the first set, snap back to start
 			if (track.scrollLeft >= track.scrollWidth / 2) {
 				track.scrollLeft = 0;
@@ -176,7 +176,7 @@ const Homepage = () => {
 			}
 			animationFrameId = requestAnimationFrame(scroll);
 		};
-		
+
 		animationFrameId = requestAnimationFrame(scroll);
 		return () => cancelAnimationFrame(animationFrameId);
 	}, [trendingHovered, trendingProducts.length]);
@@ -866,6 +866,7 @@ const Homepage = () => {
 									<ProductCard
 										key={product._id}
 										product={product}
+										showCountryTag={true}
 									/>
 								))}
 								{/* Skeleton tiles while fetching next page */}

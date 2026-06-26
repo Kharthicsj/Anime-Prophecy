@@ -533,7 +533,7 @@ export const getAnalyticsProducts = asyncHandler(async (req, res) => {
 
     const products = await Product.find(filter)
         .select(
-            'title animeTag category subCategory store countries price inStock views clicks buyNowClicks images',
+            'title animeTag category subCategory store countries price currency rating inStock views clicks buyNowClicks images',
         )
         .sort({ views: -1 })
         .lean();
