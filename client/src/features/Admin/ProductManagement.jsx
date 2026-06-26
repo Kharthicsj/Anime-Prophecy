@@ -1025,8 +1025,13 @@ const ProductManagement = () => {
 			return next;
 		});
 	};
-	const setMain = (idx) =>
-		setImageItems((prev) => prev.map((img, i) => ({ ...img, isMain: i === idx })));
+	const setMain = (idx) => {
+		setImageItems((prev) => {
+			if (idx === 0) return prev.map((img, i) => ({ ...img, isMain: i === 0 }));
+			const newItems = arrayMove(prev, idx, 0);
+			return newItems.map((img, i) => ({ ...img, isMain: i === 0 }));
+		});
+	};
 
 	const removeVideo = (idx) => {
 		setVideoItems((prev) => {
@@ -1035,8 +1040,13 @@ const ProductManagement = () => {
 			return next;
 		});
 	};
-	const setPrimaryVideo = (idx) =>
-		setVideoItems((prev) => prev.map((vid, i) => ({ ...vid, isPrimary: i === idx })));
+	const setPrimaryVideo = (idx) => {
+		setVideoItems((prev) => {
+			if (idx === 0) return prev.map((vid, i) => ({ ...vid, isPrimary: i === 0 }));
+			const newItems = arrayMove(prev, idx, 0);
+			return newItems.map((vid, i) => ({ ...vid, isPrimary: i === 0 }));
+		});
+	};
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
