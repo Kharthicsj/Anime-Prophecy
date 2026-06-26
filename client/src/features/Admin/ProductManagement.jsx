@@ -419,6 +419,8 @@ const ProductManagement = () => {
 	const [showCopyModal, setShowCopyModal] = useState(false);
 	const [copiedFromProduct, setCopiedFromProduct] = useState(""); // name of product metadata was copied from
 	const [isCopying, setIsCopying] = useState(false);
+	const [urlToFetch, setUrlToFetch] = useState("");
+	const [isFetchingUrl, setIsFetchingUrl] = useState(false);
 
 	// Search / Sort / Filter state for list view
 	const [searchQuery, setSearchQuery] = useState("");
@@ -955,6 +957,51 @@ const ProductManagement = () => {
 			setVideoItems(newVideoItems);
 		} finally {
 			setIsCopying(false);
+		}
+	};
+
+	const fetchFromUrl = async () => {
+		if (!urlToFetch) {
+			alert("Please enter a URL to fetch.");
+			return;
+		}
+		setIsFetchingUrl(true);
+		try {
+			const res = await apiClient.post("/scraper/fetch-product", { url: urlToFetch });
+			if (res.data.success && res.data.data) {
+				const { title, description, price, imageUrl } = res.data.data;
+				setFormData(prev => ({
+					...prev,
+					title: title || prev.title,
+					description: description || prev.description,
+					price: price || prev.price,
+					affiliateLink: urlToFetch, // auto-fill affiliate link
+				}));
+
+				if (imageUrl) {
+					// We can fetch the image as a file and add it
+					const file = await urlToFile(imageUrl, `fetched_image.jpg`);
+					if (file) {
+						setImageItems(prev => {
+							const newImage = {
+								id: `img-${Math.random().toString(36).substr(2, 9)}`,
+								file: file,
+								previewUrl: URL.createObjectURL(file),
+								url: null,
+								publicId: null,
+								isMain: prev.length === 0
+							};
+							return [...prev, newImage];
+						});
+					}
+				}
+				setUrlToFetch("");
+			}
+		} catch (error) {
+			console.error(error);
+			alert(error.response?.data?.message || "Failed to fetch product data from URL.");
+		} finally {
+			setIsFetchingUrl(false);
 		}
 	};
 
@@ -1742,6 +1789,32 @@ const ProductManagement = () => {
 										</button>
 									</div>
 								)}
+
+								{/* ── Auto-Import from URL banner ── */}
+								<div className="mb-6 p-4 rounded-xl bg-zinc-800/70 border border-zinc-700">
+									<h3 className="text-sm font-semibold text-white mb-2">Auto-Import from URL</h3>
+									<p className="text-xs text-zinc-400 mb-3">Paste an affiliate link (e.g. from Diffbot-supported sites) to automatically extract the title, description, price, and image.</p>
+									<div className="flex gap-2">
+										<Input
+											placeholder="https://..."
+											value={urlToFetch}
+											onChange={(e) => setUrlToFetch(e.target.value)}
+											className="flex-1"
+										/>
+										<Button
+											type="button"
+											onClick={fetchFromUrl}
+											disabled={isFetchingUrl || !urlToFetch}
+											className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+										>
+											{isFetchingUrl ? (
+												<span className="flex items-center gap-2"><FiRefreshCw className="animate-spin" /> Fetching...</span>
+											) : (
+												<span className="flex items-center gap-2"><FiSearch /> Fetch Data</span>
+											)}
+										</Button>
+									</div>
+								</div>
 
 								<div className="space-y-4">
 									<h3 className="text-lg font-bold text-white">

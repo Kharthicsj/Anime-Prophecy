@@ -18,6 +18,7 @@ import newsletterRoutes from './routes/newsletterRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import trendingRoutes from './routes/trendingRoutes.js';
 import productSuggestionRoutes from './routes/productSuggestionRoutes.js';
+import scraperRoutes from './routes/scraperRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -112,6 +113,7 @@ const routeMounts = [
     ['/api/settings', '/settings', settingsRoutes],
     ['/api/trending', '/trending', trendingRoutes],
     ['/api/suggestions', '/suggestions', productSuggestionRoutes],
+    ['/api/scraper', '/scraper', scraperRoutes],
 ];
 
 for (const [apiPath, legacyPath, router] of routeMounts) {
