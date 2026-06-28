@@ -2,10 +2,13 @@
 import { createContext, useState, useCallback, useEffect } from "react";
 import { normalizeCountryValue } from "../utils/countries";
 import apiClient from "../services/apiClient";
+import { usePostHog } from "posthog-js/react";
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+	const posthog = usePostHog();
+
 	const [selectedCountry, setSelectedCountry] = useState(() => {
 		return normalizeCountryValue(localStorage.getItem("selectedCountry"));
 	});
@@ -52,7 +55,15 @@ export const AppProvider = ({ children }) => {
 	const updateUser = useCallback((userData, authenticated = true) => {
 		setUser(userData);
 		setIsAuthenticated(authenticated);
-	}, []);
+		
+		if (posthog) {
+			if (userData && userData._id && authenticated) {
+				posthog.identify(userData._id);
+			} else if (!authenticated) {
+				posthog.reset();
+			}
+		}
+	}, [posthog]);
 
 	const value = {
 		selectedCountry,

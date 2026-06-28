@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import connectDB from './config/database.js';
 import initCloudinary from './config/cloudinary.js';
 import { requestLogger, errorHandler } from './middlewares/auth.js';
@@ -20,6 +21,7 @@ import trendingRoutes from './routes/trendingRoutes.js';
 import productSuggestionRoutes from './routes/productSuggestionRoutes.js';
 import scraperRoutes from './routes/scraperRoutes.js';
 import themeRoutes from './routes/themeRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -89,6 +91,21 @@ const limiter = rateLimit({
 // Apply rate limiter to all routes
 app.use(limiter);
 
+// ===== PostHog Reverse Proxy =====
+// Must be placed BEFORE body parsers so the request stream isn't consumed
+app.use('/ingest', createProxyMiddleware({
+    target: 'https://us.i.posthog.com',
+    changeOrigin: true,
+    pathRewrite: { '^/ingest': '' },
+    onProxyReq: (proxyReq, req) => {
+        // Forward client IP to PostHog for accurate geography data
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        if (clientIp) {
+            proxyReq.setHeader('x-forwarded-for', clientIp);
+        }
+    }
+}));
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -116,6 +133,7 @@ const routeMounts = [
     ['/api/suggestions', '/suggestions', productSuggestionRoutes],
     ['/api/scraper', '/scraper', scraperRoutes],
     ['/api/themes', '/themes', themeRoutes],
+    ['/api/analytics', '/analytics', analyticsRoutes],
 ];
 
 for (const [apiPath, legacyPath, router] of routeMounts) {

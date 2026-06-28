@@ -6,6 +6,7 @@ import NewsletterPanel from "./NewsletterPanel";
 import SecurityPanel from "./SecurityPanel";
 import SuggestionManagement from "./SuggestionManagement";
 import AnalyticsPanel from "./analytics/AnalyticsPanel";
+import TrafficPanel from "./analytics/TrafficPanel";
 
 /* ─── Icons (inline SVG) ─── */
 const Icon = ({ d, size = 20 }) => (
@@ -45,9 +46,11 @@ const IcArrow = () => <Icon d="M5 12h14M12 5l7 7-7 7" />;
 const IcLandscape = () => <Icon d="M3 9l4-4 4 4 4-6 6 6H3zM3 21h18v-6H3v6z" />;
 const IcShield = () => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
 const IcLightbulb = () => <Icon d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5 M9 18h6 M10 22h4" />;
+const IcActivity = () => <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />;
 
 const NAV_ITEMS = [
 	{ id: "overview", label: "Overview", Icon: IcChart },
+	{ id: "traffic", label: "Traffic", Icon: IcActivity },
 	{ id: "products", label: "Products", Icon: IcBox },
 	{ id: "banners", label: "Banners", Icon: IcImage },
 	{ id: "carousels", label: "Carousels", Icon: IcSlides },
@@ -690,6 +693,13 @@ const AdminDashboard = () => {
 
 					{/* ── Landing Image Tab ── */}
 					{activeTab === "landingImage" && <LandingImagePanel />}
+
+					{/* ── Traffic Tab ── */}
+					{activeTab === "traffic" && (
+						<div className="mx-auto w-full max-w-[1400px]">
+							<TrafficPanel />
+						</div>
+					)}
 
 					{/* ── Suggestions Tab ── */}
 					{activeTab === "suggestions" && <SuggestionManagement />}
