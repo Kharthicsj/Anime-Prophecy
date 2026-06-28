@@ -27,6 +27,26 @@ const themeSchema = new mongoose.Schema({
     buttonColor: {
         type: String,
         default: '#9333ea', // default purple
+    },
+    priceColor: {
+        type: String,
+        default: '#c084fc', // purple-400
+    },
+    categoryBgColor: {
+        type: String,
+        default: '#27272a', // zinc-800
+    },
+    categoryTextColor: {
+        type: String,
+        default: '#e4e4e7', // zinc-200
+    },
+    subCategoryBgColor: {
+        type: String,
+        default: 'rgba(76, 29, 149, 0.3)', // violet-900/30
+    },
+    subCategoryTextColor: {
+        type: String,
+        default: '#c4b5fd', // violet-300
     }
 }, { timestamps: true });
 

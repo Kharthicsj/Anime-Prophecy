@@ -47,6 +47,12 @@ const ProductCard = ({ product, showCountryTag = false, className = "", override
 	const generalTheme = (overrideTheme?.tagType === 'general') ? overrideTheme : getTheme('general', 'Global');
 	const animeTheme = (overrideTheme?.tagType === 'anime' && overrideTheme?.tag === product.animeTag) ? overrideTheme : getTheme('anime', product.animeTag);
 	const storeTheme = (overrideTheme?.tagType === 'store' && overrideTheme?.tag === product.store) ? overrideTheme : getTheme('store', product.store);
+	
+	const firstCountryTheme = product.countries?.map(c => 
+		(overrideTheme?.tagType === 'country' && overrideTheme?.tag === c) ? overrideTheme : getTheme('country', c)
+	).find(t => t);
+
+	const cardTheme = animeTheme || storeTheme || firstCountryTheme || generalTheme;
 
 	const handleCardClick = useCallback((e) => {
 		if (e.ctrlKey || e.metaKey || e.button === 1) return;
@@ -136,11 +142,17 @@ const ProductCard = ({ product, showCountryTag = false, className = "", override
 				{/* Category, SubCategory & Rating */}
 				<div className="flex items-center justify-between text-xs text-zinc-400">
 					<div className="flex items-center gap-1.5 flex-wrap">
-						<span className="bg-zinc-800 px-2.5 py-1 rounded">
+						<span 
+							style={{ backgroundColor: cardTheme?.categoryBgColor || '#27272a', color: cardTheme?.categoryTextColor || '#e4e4e7' }}
+							className="px-2.5 py-1 rounded"
+						>
 							{product.category}
 						</span>
 						{product.subCategory && (
-							<span className="bg-violet-900/30 text-violet-300 px-2 py-1 rounded border border-violet-800/40">
+							<span 
+								style={{ backgroundColor: cardTheme?.subCategoryBgColor || 'rgba(76, 29, 149, 0.3)', color: cardTheme?.subCategoryTextColor || '#c4b5fd' }}
+								className="px-2 py-1 rounded"
+							>
 								{product.subCategory}
 							</span>
 						)}
@@ -155,7 +167,10 @@ const ProductCard = ({ product, showCountryTag = false, className = "", override
 
 				{/* Price */}
 				<div className="flex items-center justify-between">
-					<span className="text-lg font-bold text-purple-400">
+					<span 
+						style={{ color: cardTheme?.priceColor || '#c084fc' }}
+						className="text-lg font-bold"
+					>
 						{product.currency}{" "}
 						{currencySymbol && (
 							<span className="mr-0.5">{currencySymbol}</span>
@@ -170,11 +185,11 @@ const ProductCard = ({ product, showCountryTag = false, className = "", override
 
 				{/* CTA Button */}
 				<div 
-					style={generalTheme ? {
-						backgroundColor: generalTheme.buttonColor || generalTheme.backgroundColor,
-						color: generalTheme.textColor
+					style={cardTheme ? {
+						backgroundColor: cardTheme.buttonColor || cardTheme.backgroundColor,
+						color: cardTheme.textColor
 					} : {}}
-					className={`block w-full text-center ${!generalTheme ? 'bg-purple-600 group-hover:bg-purple-700 text-white' : 'opacity-90 hover:opacity-100'} font-semibold py-2 rounded-lg transition-all mt-3`}
+					className={`block w-full text-center ${!cardTheme ? 'bg-purple-600 group-hover:bg-purple-700 text-white' : 'opacity-90 hover:opacity-100'} font-semibold py-2 rounded-lg transition-all mt-3`}
 				>
 					View Details →
 				</div>

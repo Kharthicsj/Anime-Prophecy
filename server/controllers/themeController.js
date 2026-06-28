@@ -14,14 +14,14 @@ export const getThemes = async (req, res) => {
 // Create or update a theme
 export const saveTheme = async (req, res) => {
     try {
-        const { tagType, tag, backgroundColor, textColor, borderColor, buttonColor } = req.body;
+        const { tagType, tag, backgroundColor, textColor, borderColor, buttonColor, priceColor, categoryBgColor, categoryTextColor, subCategoryBgColor, subCategoryTextColor } = req.body;
         if (!tagType || !tag) {
             return res.status(400).json({ success: false, message: 'tagType and tag are required' });
         }
 
         const theme = await Theme.findOneAndUpdate(
             { tagType, tag },
-            { backgroundColor, textColor, borderColor, buttonColor },
+            { backgroundColor, textColor, borderColor, buttonColor, priceColor, categoryBgColor, categoryTextColor, subCategoryBgColor, subCategoryTextColor },
             { new: true, upsert: true } // Create if doesn't exist, else update
         );
 

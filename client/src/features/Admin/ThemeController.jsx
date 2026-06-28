@@ -21,7 +21,12 @@ const ThemeController = () => {
         backgroundColor: '#9333ea',
         textColor: '#ffffff',
         borderColor: 'transparent',
-        buttonColor: '#9333ea'
+        buttonColor: '#9333ea',
+        priceColor: '#c084fc',
+        categoryBgColor: '#27272a',
+        categoryTextColor: '#e4e4e7',
+        subCategoryBgColor: '#4c1d95',
+        subCategoryTextColor: '#c4b5fd'
     });
     const [editingId, setEditingId] = useState(null);
 
@@ -100,7 +105,12 @@ const ThemeController = () => {
                     backgroundColor: '#9333ea',
                     textColor: '#ffffff',
                     borderColor: 'transparent',
-                    buttonColor: '#9333ea'
+                    buttonColor: '#9333ea',
+                    priceColor: '#c084fc',
+                    categoryBgColor: '#27272a',
+                    categoryTextColor: '#e4e4e7',
+                    subCategoryBgColor: '#4c1d95',
+                    subCategoryTextColor: '#c4b5fd'
                 });
             }
         } catch (error) {
@@ -118,7 +128,12 @@ const ThemeController = () => {
             backgroundColor: theme.backgroundColor,
             textColor: theme.textColor,
             borderColor: theme.borderColor,
-            buttonColor: theme.buttonColor || '#9333ea'
+            buttonColor: theme.buttonColor || '#9333ea',
+            priceColor: theme.priceColor || '#c084fc',
+            categoryBgColor: theme.categoryBgColor || '#27272a',
+            categoryTextColor: theme.categoryTextColor || '#e4e4e7',
+            subCategoryBgColor: theme.subCategoryBgColor || '#4c1d95',
+            subCategoryTextColor: theme.subCategoryTextColor || '#c4b5fd'
         });
         setEditingId(theme._id);
         setShowForm(true);
@@ -279,7 +294,7 @@ const ThemeController = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Button Color (Optional)</label>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Button Color</label>
                                 <div className="flex gap-2">
                                     <input 
                                         type="color" 
@@ -296,11 +311,101 @@ const ThemeController = () => {
                                     />
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Price Text Color</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="color" 
+                                        name="priceColor" 
+                                        value={formData.priceColor || '#c084fc'} 
+                                        onChange={handleInputChange} 
+                                        className="h-10 w-12 rounded cursor-pointer bg-transparent border-0"
+                                    />
+                                    <Input 
+                                        name="priceColor" 
+                                        value={formData.priceColor} 
+                                        onChange={handleInputChange} 
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Category Tag Bg</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="color" 
+                                        name="categoryBgColor" 
+                                        value={formData.categoryBgColor || '#27272a'} 
+                                        onChange={handleInputChange} 
+                                        className="h-10 w-12 rounded cursor-pointer bg-transparent border-0"
+                                    />
+                                    <Input 
+                                        name="categoryBgColor" 
+                                        value={formData.categoryBgColor} 
+                                        onChange={handleInputChange} 
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Category Tag Text</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="color" 
+                                        name="categoryTextColor" 
+                                        value={formData.categoryTextColor || '#e4e4e7'} 
+                                        onChange={handleInputChange} 
+                                        className="h-10 w-12 rounded cursor-pointer bg-transparent border-0"
+                                    />
+                                    <Input 
+                                        name="categoryTextColor" 
+                                        value={formData.categoryTextColor} 
+                                        onChange={handleInputChange} 
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Subcategory Tag Bg</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="color" 
+                                        name="subCategoryBgColor" 
+                                        value={formData.subCategoryBgColor || '#4c1d95'} 
+                                        onChange={handleInputChange} 
+                                        className="h-10 w-12 rounded cursor-pointer bg-transparent border-0"
+                                    />
+                                    <Input 
+                                        name="subCategoryBgColor" 
+                                        value={formData.subCategoryBgColor} 
+                                        onChange={handleInputChange} 
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-zinc-300 mb-1">Subcategory Tag Text</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="color" 
+                                        name="subCategoryTextColor" 
+                                        value={formData.subCategoryTextColor || '#c4b5fd'} 
+                                        onChange={handleInputChange} 
+                                        className="h-10 w-12 rounded cursor-pointer bg-transparent border-0"
+                                    />
+                                    <Input 
+                                        name="subCategoryTextColor" 
+                                        value={formData.subCategoryTextColor} 
+                                        onChange={handleInputChange} 
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         
                         <div className="md:col-span-2 p-4 bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col items-center justify-center min-h-[300px]">
                             <div className="text-zinc-500 text-sm mb-4 self-start">Card Preview</div>
-                            <div className="w-full max-w-[280px]">
+                            <div className="w-full max-w-[280px] pointer-events-none">
                                 <ProductCard 
                                     product={{
                                         _id: 'preview',
@@ -309,7 +414,7 @@ const ThemeController = () => {
                                         subCategory: 'Action Figure',
                                         price: 49.99,
                                         currency: 'USD',
-                                        rating: 4.8,
+                                        rating: 0,
                                         inStock: true,
                                         animeTag: formData.tagType === 'anime' ? formData.tag || 'Anime' : 'Demon Slayer',
                                         store: formData.tagType === 'store' ? formData.tag || 'Store' : 'Amazon',

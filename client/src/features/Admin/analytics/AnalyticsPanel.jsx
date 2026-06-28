@@ -23,6 +23,7 @@ import {
 	catalogLevel2,
 	formatNumber,
 } from "./analyticsUtils";
+import { useAppContext } from "../../../hooks/useAppContext";
 
 const KPI_CONFIG = [
 	{
@@ -234,6 +235,12 @@ const AnalyticsPanel = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [stockFilter, setStockFilter] = useState("all");
+	const { themes } = useAppContext();
+
+	const getSegmentColor = useCallback((name) => {
+		const theme = themes?.find(t => t.tag === name);
+		return theme?.backgroundColor || null;
+	}, [themes]);
 
 	const fetchProducts = useCallback(async () => {
 		setLoading(true);
@@ -342,6 +349,7 @@ const AnalyticsPanel = () => {
 						totalLabel={geo.totalLabel}
 						onSegmentClick={geo.onSegmentClick}
 						onBack={geo.onBack}
+						getSegmentColor={getSegmentColor}
 					/>
 					<DrillDownChart
 						title={catalog.title}
@@ -354,6 +362,7 @@ const AnalyticsPanel = () => {
 						totalLabel={catalog.totalLabel}
 						onSegmentClick={catalog.onSegmentClick}
 						onBack={catalog.onBack}
+						getSegmentColor={getSegmentColor}
 					/>
 				</div>
 				<div className="flex flex-wrap gap-2 text-xs text-zinc-600">

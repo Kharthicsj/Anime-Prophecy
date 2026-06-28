@@ -35,6 +35,7 @@ const DrillDownChart = ({
 	valueLabel = "products",
 	totalLabel = "Total",
 	showTotal = true,
+	getSegmentColor,
 }) => {
 	const hasData = data.length > 0;
 	const isHorizontal = chartType === "horizontal-bar";
@@ -110,10 +111,10 @@ const DrillDownChart = ({
 						if (canDrill && entry?.name) onSegmentClick(entry.name);
 					}}
 				>
-					{data.map((_, i) => (
+					{data.map((entry, i) => (
 						<Cell
 							key={`cell-${i}`}
-							fill={CHART_COLORS[i % CHART_COLORS.length]}
+							fill={(getSegmentColor && getSegmentColor(entry.name, i)) || CHART_COLORS[i % CHART_COLORS.length]}
 							className="transition-opacity duration-200 hover:opacity-75"
 						/>
 					))}
@@ -142,10 +143,10 @@ const DrillDownChart = ({
 							onSegmentClick(data[index].name);
 					}}
 				>
-					{data.map((_, i) => (
+					{data.map((entry, i) => (
 						<Cell
 							key={`slice-${i}`}
-							fill={CHART_COLORS[i % CHART_COLORS.length]}
+							fill={(getSegmentColor && getSegmentColor(entry.name, i)) || CHART_COLORS[i % CHART_COLORS.length]}
 							className="transition-opacity duration-200 hover:opacity-75"
 						/>
 					))}
@@ -237,6 +238,24 @@ const DrillDownChart = ({
 					<MousePointerClick className="h-3 w-3 shrink-0" />
 					Click a segment to drill deeper
 				</p>
+			)}
+
+			{/* Custom Legend */}
+			{hasData && (
+				<div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] justify-center pt-3 border-t border-zinc-800/40">
+					{data.map((d, i) => {
+						const color = (getSegmentColor && getSegmentColor(d.name, i)) || CHART_COLORS[i % CHART_COLORS.length];
+						return (
+							<div key={`legend-${i}`} className="flex items-center gap-1.5">
+								<span 
+									className="w-2.5 h-2.5 rounded-sm inline-block shadow-sm" 
+									style={{ backgroundColor: color }}
+								/>
+								<span className="text-zinc-400">{d.name}</span>
+							</div>
+						);
+					})}
+				</div>
 			)}
 		</div>
 	);
