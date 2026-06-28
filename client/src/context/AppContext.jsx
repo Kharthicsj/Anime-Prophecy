@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useCallback } from "react";
+import { createContext, useState, useCallback, useEffect } from "react";
 import { normalizeCountryValue } from "../utils/countries";
+import apiClient from "../services/apiClient";
 
 export const AppContext = createContext();
 
@@ -16,6 +17,27 @@ export const AppProvider = ({ children }) => {
 	const [user, setUser] = useState(null);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [themes, setThemes] = useState([]);
+
+	useEffect(() => {
+		const fetchThemes = async () => {
+			try {
+				const res = await apiClient.get('/themes');
+				if (res.data?.success) {
+					setThemes(res.data.data);
+				}
+			} catch (error) {
+				console.error("Failed to fetch themes", error);
+			}
+		};
+		fetchThemes();
+	}, []);
+
+	const getTheme = useCallback((tagType, tag) => {
+		if (!tag) return null;
+		// Case insensitive match
+		return themes.find(t => t.tagType === tagType && t.tag.toLowerCase() === tag.toLowerCase()) || null;
+	}, [themes]);
 
 	const updateCountry = useCallback((country) => {
 		setSelectedCountry(country);
@@ -43,6 +65,8 @@ export const AppProvider = ({ children }) => {
 		setIsAuthenticated,
 		loading,
 		setLoading,
+		themes,
+		getTheme,
 	};
 
 	return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

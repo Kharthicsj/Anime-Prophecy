@@ -15,6 +15,7 @@ import { FiCopy, FiX, FiRefreshCw, FiSearch, FiArrowDown } from "react-icons/fi"
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ThemeController from "./ThemeController";
 
 // ─── Utility to convert to Camel Case (Title Case for UI) ───────────
 const toTitleCase = (str) => {
@@ -1370,24 +1371,36 @@ const ProductManagement = () => {
 						<h1 className="hidden sm:block text-xl font-bold text-white">
 							{viewMode === "list"
 								? "Product Management"
-								: editingId
-									? "Edit Product"
-									: "Add New Product"}
+								: viewMode === "themes"
+									? "Theme Controller"
+									: editingId
+										? "Edit Product"
+										: "Add New Product"}
 						</h1>
 						<h1 className="sm:hidden text-lg font-bold text-white">
-							{viewMode === "list" ? "Products" : "Edit"}
+							{viewMode === "list" ? "Products" : viewMode === "themes" ? "Themes" : "Edit"}
 						</h1>
 					</div>
 
 					{/* Desktop Menu */}
 					<div className="hidden sm:flex gap-3">
-						{viewMode === "form" && (
+						{viewMode !== "list" && (
 							<Button
 								onClick={() => setViewMode("list")}
 								variant="secondary"
 								size="sm"
 							>
-								Cancel
+								Back to Products
+							</Button>
+						)}
+						{viewMode === "list" && (
+							<Button
+								onClick={() => setViewMode("themes")}
+								variant="secondary"
+								size="sm"
+                                className="border border-purple-500/30 hover:border-purple-500"
+							>
+								Manage Themes
 							</Button>
 						)}
 						<Button
@@ -1461,7 +1474,9 @@ const ProductManagement = () => {
 			</header>
 
 			<div className="max-w-6xl mx-auto px-4 py-8">
-				{viewMode === "list" ? (
+				{viewMode === "themes" ? (
+					<ThemeController />
+				) : viewMode === "list" ? (
 					<div>
 						{/* ── Catalog Header ── */}
 						<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-4">

@@ -21,7 +21,7 @@ const SUB_CATEGORY_MAP = {
 };
 
 /* ─── SearchableDropdown ───────────────────────────────────────────────────── */
-export const SearchableDropdown = ({ label, value, options, onChange, accentColor = "#a855f7", isMulti = false }) => {
+export const SearchableDropdown = ({ label, value, options, onChange, accentColor = "#a855f7", isMulti = false, buttonStyle = {} }) => {
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const containerRef = useRef(null);
@@ -128,6 +128,7 @@ export const SearchableDropdown = ({ label, value, options, onChange, accentColo
 					transition: "border-color 0.18s",
 					textAlign: "left",
 					fontFamily: "inherit",
+                    ...buttonStyle
 				}}
 			>
 				<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

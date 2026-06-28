@@ -2,6 +2,7 @@ import { StarIcon } from "./Icons";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../services/apiClient";
+import { useAppContext } from "../../hooks/useAppContext";
 
 // Currency symbol lookup map
 const CURRENCY_SYMBOLS = {
@@ -25,11 +26,27 @@ const CURRENCY_SYMBOLS = {
  * Displays anime merchandise product with image, title, and CTA.
  * Clicking anywhere on the card navigates to the Product Display Page.
  */
-const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
+const ProductCard = ({ product, showCountryTag = false, className = "", overrideTheme = null }) => {
 	const navigate = useNavigate();
+	const { getTheme } = useAppContext();
 
 	const mainImage =
 		product.images?.find((img) => img.isMain) || product.images?.[0];
+
+	const getThemeStyle = (theme, defaultBg, defaultText, defaultBorder = 'transparent') => {
+		if (!theme) return { backgroundColor: defaultBg, color: defaultText, borderColor: defaultBorder, borderWidth: defaultBorder !== 'transparent' ? '1px' : '0' };
+		return {
+			backgroundColor: theme.backgroundColor,
+			color: theme.textColor,
+			borderColor: theme.borderColor === 'transparent' ? 'transparent' : theme.borderColor,
+			borderWidth: theme.borderColor !== 'transparent' ? '1px' : '0',
+			borderStyle: 'solid'
+		};
+	};
+
+	const generalTheme = (overrideTheme?.tagType === 'general') ? overrideTheme : getTheme('general', 'Global');
+	const animeTheme = (overrideTheme?.tagType === 'anime' && overrideTheme?.tag === product.animeTag) ? overrideTheme : getTheme('anime', product.animeTag);
+	const storeTheme = (overrideTheme?.tagType === 'store' && overrideTheme?.tag === product.store) ? overrideTheme : getTheme('store', product.store);
 
 	const handleCardClick = useCallback((e) => {
 		if (e.ctrlKey || e.metaKey || e.button === 1) return;
@@ -45,9 +62,15 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 			href={`/product/${product._id}`}
 			onClick={handleCardClick}
 			tabIndex={0}
+			style={generalTheme ? {
+				backgroundColor: generalTheme.backgroundColor,
+				borderColor: generalTheme.borderColor === 'transparent' ? 'transparent' : generalTheme.borderColor,
+				borderWidth: generalTheme.borderColor !== 'transparent' ? '1px' : '0',
+				borderStyle: 'solid'
+			} : {}}
 			className={`
         group cursor-pointer rounded-xl overflow-hidden min-w-0
-        bg-zinc-900 border border-zinc-800 hover:border-purple-500
+        ${!generalTheme ? 'bg-zinc-900 border border-zinc-800 hover:border-purple-500' : ''}
         transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20
         transform hover:scale-105 block
         ${className}
@@ -67,28 +90,38 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 
 				{/* Badges Container */}
 				<div className="absolute top-3 left-3 flex flex-col items-start gap-2">
-					<span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+					<span 
+						style={getThemeStyle(animeTheme, '#9333ea', '#ffffff')}
+						className="text-xs font-bold px-3 py-1 rounded-full shadow-md"
+					>
 						{product.animeTag}
 					</span>
 					{showCountryTag && product.countries && (
 						<div className="flex flex-wrap gap-1.5">
 							{product.countries
 								.filter((c) => c.toLowerCase() !== "other" && c.toLowerCase() !== "worldwide")
-								.map((c, idx) => (
-									<span
-										key={idx}
-										className="bg-zinc-900/90 text-zinc-300 text-[0.65rem] font-bold px-2 py-0.5 rounded border border-zinc-700 backdrop-blur-sm shadow-md tracking-wider uppercase"
-									>
-										{c}
-									</span>
-								))}
+								.map((c, idx) => {
+									const countryTheme = (overrideTheme?.tagType === 'country' && overrideTheme?.tag === c) ? overrideTheme : getTheme('country', c);
+									return (
+										<span
+											key={idx}
+											style={getThemeStyle(countryTheme, 'rgba(24,24,27,0.9)', '#d4d4d8', '#3f3f46')}
+											className="text-[0.65rem] font-bold px-2 py-0.5 rounded backdrop-blur-sm shadow-md tracking-wider uppercase"
+										>
+											{c}
+										</span>
+									);
+								})}
 						</div>
 					)}
 				</div>
 
 				{/* Store Badge */}
 				<div className="absolute top-3 right-3">
-					<span className="bg-zinc-900 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full border border-zinc-700">
+					<span 
+						style={getThemeStyle(storeTheme, '#18181b', '#facc15', '#3f3f46')}
+						className="text-xs font-bold px-3 py-1 rounded-full"
+					>
 						{product.store}
 					</span>
 				</div>
@@ -136,7 +169,13 @@ const ProductCard = ({ product, showCountryTag = false, className = "" }) => {
 				</div>
 
 				{/* CTA Button */}
-				<div className="block w-full text-center bg-purple-600 group-hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors mt-3">
+				<div 
+					style={generalTheme ? {
+						backgroundColor: generalTheme.buttonColor || generalTheme.backgroundColor,
+						color: generalTheme.textColor
+					} : {}}
+					className={`block w-full text-center ${!generalTheme ? 'bg-purple-600 group-hover:bg-purple-700 text-white' : 'opacity-90 hover:opacity-100'} font-semibold py-2 rounded-lg transition-all mt-3`}
+				>
 					View Details →
 				</div>
 			</div>

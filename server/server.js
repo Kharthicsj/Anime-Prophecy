@@ -19,6 +19,7 @@ import settingsRoutes from './routes/settingsRoutes.js';
 import trendingRoutes from './routes/trendingRoutes.js';
 import productSuggestionRoutes from './routes/productSuggestionRoutes.js';
 import scraperRoutes from './routes/scraperRoutes.js';
+import themeRoutes from './routes/themeRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -114,6 +115,7 @@ const routeMounts = [
     ['/api/trending', '/trending', trendingRoutes],
     ['/api/suggestions', '/suggestions', productSuggestionRoutes],
     ['/api/scraper', '/scraper', scraperRoutes],
+    ['/api/themes', '/themes', themeRoutes],
 ];
 
 for (const [apiPath, legacyPath, router] of routeMounts) {
