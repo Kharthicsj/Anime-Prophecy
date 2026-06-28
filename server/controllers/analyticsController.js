@@ -43,6 +43,13 @@ export const getAnalyticsData = async (req, res) => {
             dateRange: { date_from: "-7d" }
         };
 
+        // 2.5 Sessions over time
+        const sessionsQuery = {
+            kind: "TrendsQuery",
+            series: [{ kind: "EventsNode", event: "$pageview", math: "unique_session" }],
+            dateRange: { date_from: "-7d" }
+        };
+
         // 3. Browsers breakdown
         const browsersQuery = {
             kind: "TrendsQuery",
@@ -83,9 +90,10 @@ export const getAnalyticsData = async (req, res) => {
             dateRange: { date_from: "-7d" }
         };
 
-        const [pageviews, uniqueVisitors, browsers, referrers, paths, countries, devices] = await Promise.all([
+        const [pageviews, uniqueVisitors, sessions, browsers, referrers, paths, countries, devices] = await Promise.all([
             fetchQuery(pageviewsQuery),
             fetchQuery(uniqueVisitorsQuery),
+            fetchQuery(sessionsQuery),
             fetchQuery(browsersQuery),
             fetchQuery(referrersQuery),
             fetchQuery(pathsQuery),
@@ -98,6 +106,7 @@ export const getAnalyticsData = async (req, res) => {
             data: {
                 pageviews: pageviews?.results || [],
                 uniqueVisitors: uniqueVisitors?.results || [],
+                sessions: sessions?.results || [],
                 browsers: browsers?.results || [],
                 referrers: referrers?.results || [],
                 paths: paths?.results || [],
