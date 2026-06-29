@@ -108,3 +108,21 @@ export const deleteBanner = asyncHandler(async (req, res) => {
     await Banner.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Banner deleted successfully' });
 });
+
+// Reorder banners
+export const reorderBanners = asyncHandler(async (req, res) => {
+    const { banners } = req.body;
+    if (!banners || !Array.isArray(banners)) {
+        return res.status(400).json({ success: false, message: 'Invalid data format' });
+    }
+
+    const bulkOps = banners.map((b) => ({
+        updateOne: {
+            filter: { _id: b.id },
+            update: { position: b.position }
+        }
+    }));
+
+    await Banner.bulkWrite(bulkOps);
+    res.json({ success: true, message: 'Banners reordered successfully' });
+});

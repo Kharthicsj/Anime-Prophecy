@@ -6,6 +6,7 @@ import {
     createBanner,
     updateBanner,
     deleteBanner,
+    reorderBanners,
 } from '../controllers/bannerController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -18,6 +19,7 @@ router.get('/:id', getBannerById);
 
 // Protected routes (admin only)
 router.post('/', verifyToken, isAdmin, upload.single('image'), createBanner);
+router.put('/reorder', verifyToken, isAdmin, reorderBanners);
 router.put('/:id', verifyToken, isAdmin, upload.single('image'), updateBanner);
 router.delete('/:id', verifyToken, isAdmin, deleteBanner);
 
