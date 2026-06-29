@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import apiClient from "../../services/apiClient";
 import { countries } from "../../utils/countries";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 /* ─── Inline SVG icons ─── */
 const IcUpload  = () => <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>;
@@ -22,6 +25,73 @@ const iS = {
   fontFamily: "inherit",
   outline: "none",
   boxSizing: "border-box",
+};
+
+const iconBtn = (color) => ({
+  width: "34px",
+  height: "34px",
+  borderRadius: "8px",
+  border: `1px solid ${color}33`,
+  background: `${color}15`,
+  color,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  transition: "background 0.2s",
+  flexShrink: 0,
+});
+
+const SortableBannerItem = ({ banner, handleEdit, handleDelete }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: banner._id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.75 : 1,
+    boxShadow: isDragging ? "0 10px 20px rgba(0,0,0,0.3)" : "none",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        display: "flex",
+        alignItems: "center",
+        gap: "1rem",
+        padding: "1rem 1.25rem",
+        borderRadius: "12px",
+        border: "1px solid #27272a",
+        background: "rgba(24,24,27,0.6)",
+      }}
+    >
+      <div {...attributes} {...listeners} style={{ cursor: "grab", color: "#71717a", display: "flex", alignItems: "center", padding: "0.5rem" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
+      </div>
+      {banner.image && (
+        <img
+          src={banner.image.url}
+          alt={banner.title}
+          style={{ width: "80px", height: "56px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
+        />
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontWeight: 600, color: "#fff", fontSize: "0.9rem" }}>{banner.title}</p>
+        <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#71717a" }}>
+          Country: {banner.country} · Position: {banner.position} · {banner.isActive ? <FaCheckCircle color="#22c55e" style={{display:"inline"}} /> : <FaTimesCircle color="#ef4444" style={{display:"inline"}} />} {banner.isActive ? "Active" : "Inactive"}
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+        <button onPointerDown={(e) => { e.stopPropagation(); handleEdit(banner); }} style={iconBtn("#3b82f6")} type="button">
+          <IcEdit />
+        </button>
+        <button onPointerDown={(e) => { e.stopPropagation(); handleDelete(banner._id); }} style={iconBtn("#ef4444")} type="button">
+          <IcTrash />
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const BannerManagement = () => {
@@ -47,7 +117,9 @@ const BannerManagement = () => {
     try {
       setLoading(true);
       const res = await apiClient.get("/slides");
-      setBanners(res.data?.data || []);
+      // Sort by position on the client just to be safe, though the server already sorts
+      const sortedBanners = (res.data?.data || []).sort((a, b) => a.position - b.position);
+      setBanners(sortedBanners);
     } catch { /* silent */ }
     finally { setLoading(false); }
   };
@@ -126,6 +198,34 @@ const BannerManagement = () => {
 
   const set = (field) => (e) =>
     setFormData((p) => ({ ...p, [field]: e.target.value }));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = banners.findIndex((b) => b._id === active.id);
+      const newIndex = banners.findIndex((b) => b._id === over.id);
+      const newBanners = arrayMove(banners, oldIndex, newIndex);
+      
+      // Update positions
+      const updatedBanners = newBanners.map((b, index) => ({ ...b, position: index }));
+      setBanners(updatedBanners);
+      
+      // Send bulk update to backend
+      try {
+        await apiClient.put('/slides/reorder', { 
+            banners: updatedBanners.map(b => ({ id: b._id, position: b.position })) 
+        });
+      } catch (err) {
+        flash("Failed to save reordered positions.", "error");
+        fetchBanners(); // revert on failure
+      }
+    }
+  };
 
   return (
     <div
@@ -295,44 +395,15 @@ const BannerManagement = () => {
             No banners yet. Create one above.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {banners.map((banner) => (
-              <div
-                key={banner._id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1rem",
-                  padding: "1rem 1.25rem",
-                  borderRadius: "12px",
-                  border: "1px solid #27272a",
-                  background: "rgba(24,24,27,0.6)",
-                }}
-              >
-                {banner.image && (
-                  <img
-                    src={banner.image.url}
-                    alt={banner.title}
-                    style={{ width: "80px", height: "56px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
-                  />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 600, color: "#fff", fontSize: "0.9rem" }}>{banner.title}</p>
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#71717a" }}>
-                    Country: {banner.country} · Position: {banner.position} · {banner.isActive ? <FaCheckCircle color="#22c55e" style={{display:"inline"}} /> : <FaTimesCircle color="#ef4444" style={{display:"inline"}} />} {banner.isActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                  <button onClick={() => handleEdit(banner)} style={iconBtn("#3b82f6")}>
-                    <IcEdit />
-                  </button>
-                  <button onClick={() => handleDelete(banner._id)} style={iconBtn("#ef4444")}>
-                    <IcTrash />
-                  </button>
-                </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={banners.map(b => b._id)} strategy={verticalListSortingStrategy}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {banners.map((banner) => (
+                  <SortableBannerItem key={banner._id} banner={banner} handleEdit={handleEdit} handleDelete={handleDelete} />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
@@ -340,19 +411,5 @@ const BannerManagement = () => {
 };
 
 const lbl = { display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#a1a1aa", marginBottom: "0.4rem" };
-const iconBtn = (color) => ({
-  width: "34px",
-  height: "34px",
-  borderRadius: "8px",
-  border: `1px solid ${color}33`,
-  background: `${color}15`,
-  color,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  transition: "background 0.2s",
-  flexShrink: 0,
-});
 
 export default BannerManagement;

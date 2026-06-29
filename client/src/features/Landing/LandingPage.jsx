@@ -275,10 +275,10 @@ const LandingPage = () => {
 				{loadingContent ? (
 					<div
 						className="animate-shimmer"
-						style={{ width: "100%", height: "1080px" }}
+						style={{ width: "100%", height: "400px" }}
 					/>
 				) : bannerSlides.length > 0 ? (
-					<AnimeBannerSlider items={bannerSlides} height="1080px" />
+					<AnimeBannerSlider items={bannerSlides} height="400px" />
 				) : null}
 			</section>
 
