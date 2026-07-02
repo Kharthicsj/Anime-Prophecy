@@ -7,7 +7,7 @@ import ProductCard from "../../components/common/ProductCard";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
 import { countries, getCountrySlug } from "../../utils/countries";
 import landingGif from "../../assets/landing.gif";
-import mainLogo from "../../assets/main_logo.jpeg";
+import mainLogo from "../../assets/main_logo.png";
 import footerLogo from "../../assets/footer_logo.jpeg";
 import ImmersiveHero from "./ImmersiveHero";
 import AnimeBannerSlider from "../../components/ui/AnimeBannerSlider";

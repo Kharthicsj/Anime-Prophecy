@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import mainLogo from "../../assets/main_logo.jpeg";
+import mainLogo from "../../assets/main_logo.png";
 import { getCountryByValue } from "../../utils/countries";
 import CountryFlag from "./CountryFlag";
 import SearchHeader from "./SearchHeader";
@@ -57,10 +57,10 @@ const MainHeader = ({ onSearch, hideSearch = false }) => {
 					}}
 					onClick={() => navigate("/")}
 				>
-					<img src={mainLogo} alt="Prophecy Hub" style={{ width:"36px", height:"36px", borderRadius:"9px", objectFit:"cover", border:"1px solid rgba(168,85,247,0.35)", flexShrink:0 }} />
-					<div style={{ display:"flex", flexDirection:"column", lineHeight:1.15 }}>
-						<span style={{ fontWeight:800, fontSize:"0.95rem", color:"#fff", whiteSpace:"nowrap" }}>Prophecy Hub</span>
-						<span style={{ fontSize:"0.55rem", color:"#a855f7", letterSpacing:"0.12em", textTransform:"uppercase" }}>Anime Merchandise Hub</span>
+					<img src={mainLogo} alt="Prophecy Hub" style={{ width: "36px", height: "36px", borderRadius: "9px", objectFit: "cover", border: "1px solid rgba(168,85,247,0.35)", flexShrink: 0 }} />
+					<div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
+						<span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#fff", whiteSpace: "nowrap" }}>Prophecy Hub</span>
+						<span style={{ fontSize: "0.55rem", color: "#a855f7", letterSpacing: "0.12em", textTransform: "uppercase" }}>Anime Merchandise Hub</span>
 					</div>
 				</div>
 
@@ -119,8 +119,8 @@ const MainHeader = ({ onSearch, hideSearch = false }) => {
 					}}
 					onClick={() => navigate("/")}
 				>
-					<img src={mainLogo} alt="Prophecy Hub" style={{ width:"28px", height:"28px", borderRadius:"6px", objectFit:"cover", border:"1px solid rgba(168,85,247,0.3)", flexShrink:0 }} />
-					<span style={{ fontWeight:700, fontSize:"0.85rem", color:"#fff" }}>Prophecy Hub</span>
+					<img src={mainLogo} alt="Prophecy Hub" style={{ width: "28px", height: "28px", borderRadius: "6px", objectFit: "cover", border: "1px solid rgba(168,85,247,0.3)", flexShrink: 0 }} />
+					<span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>Prophecy Hub</span>
 				</div>
 
 				{/* Mobile Country Pill */}

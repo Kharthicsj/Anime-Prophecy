@@ -10,7 +10,7 @@ import NotFoundPage from "../NotFound/NotFoundPage";
 import ProductCarousel from "../../components/ui/ProductCarousel";
 import SuggestProductModal from "../../components/common/SuggestProductModal";
 import { flattenCarouselItems } from "../../utils/carouselHelpers";
-import mainLogo from "../../assets/main_logo.jpeg";
+
 import {
 	getCountryBySlug,
 	getCountryByValue,
