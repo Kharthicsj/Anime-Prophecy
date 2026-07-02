@@ -433,7 +433,7 @@ const LandingPage = () => {
 						style={{
 							display: "flex",
 							flexDirection: "column",
-							alignItems: "flex-start",
+							alignItems: "center",
 							gap: "1.25rem",
 						}}
 					>
@@ -442,14 +442,16 @@ const LandingPage = () => {
 							alt="Prophecy Hub"
 							style={{
 								width: "100%",
-								maxWidth: "220px",
-								borderRadius: "20px",
+								maxWidth: "240px",
+								aspectRatio: "1/1",
+								borderRadius: "200px",
 								objectFit: "cover",
-								border: "1px solid rgba(168,85,247,0.3)",
+								border: "none",
+								clipPath: "circle(55% at 50% 50%)",
 								boxShadow: "0 8px 40px rgba(168,85,247,0.2)",
 							}}
 						/>
-						<div>
+						<div style={{ textAlign: "center" }}>
 							<p
 								style={{
 									margin: 0,
