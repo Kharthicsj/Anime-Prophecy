@@ -2,6 +2,7 @@ import Product from '../models/Product.js';
 import GlobalSettings from '../models/GlobalSettings.js';
 import { asyncHandler, AppError } from '../utils/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from 'mongoose';
 
 /**
  * Get all products with filters
@@ -442,6 +443,95 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Bulk update product visibility (private/active) in one DB operation
+ * @route PATCH /api/products/bulk-visibility
+ * @access Private/Admin
+ * @body { ids?: string[], isActive: boolean, applyToAll?: boolean, filters?: object }
+ *
+ * Two modes:
+ *   1. Specific IDs  — send { ids: ["...", ...], isActive: bool }
+ *   2. Filter-based  — send { applyToAll: true, filters: { animeTag, category, ... }, isActive: bool }
+ *      This applies to ALL matching DB records without loading them on the client.
+ */
+export const bulkUpdateVisibility = asyncHandler(async (req, res) => {
+    const { ids, isActive, applyToAll, filters = {} } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+        throw new AppError('isActive must be a boolean', 400);
+    }
+
+    let query = {};
+
+    if (applyToAll) {
+        // Build the same filter logic as getAllProductsAdmin so the admin's
+        // current filter selection is honoured.
+        if (filters.status) {
+            if (filters.status === 'active') {
+                query.isActive = true;
+                query.$or = [
+                    { scheduledUploadTime: null },
+                    { scheduledUploadTime: { $lte: new Date() } },
+                ];
+            } else if (filters.status === 'inactive') {
+                query.isActive = false;
+            } else if (filters.status === 'scheduled') {
+                query.scheduledUploadTime = { $gt: new Date() };
+            }
+        }
+        if (filters.animeTag && filters.animeTag !== 'All Anime') {
+            query.animeTag = { $in: filters.animeTag.split(',') };
+        }
+        if (filters.category && filters.category !== 'All Categories') {
+            query.category = { $in: filters.category.split(',') };
+        }
+        if (filters.store && filters.store !== 'All Stores') {
+            query.store = { $in: filters.store.split(',') };
+        }
+        if (filters.country && filters.country !== 'All Countries') {
+            query.countries = filters.country;
+        }
+        if (filters.search?.trim()) {
+            const q = filters.search.trim();
+            query.$or = [
+                { title: { $regex: q, $options: 'i' } },
+                { animeTag: { $regex: q, $options: 'i' } },
+            ];
+        }
+    } else {
+        // Specific IDs mode
+        if (!Array.isArray(ids) || ids.length === 0) {
+            throw new AppError('ids must be a non-empty array', 400);
+        }
+        // Hard cap: prevent accidentally huge payloads
+        if (ids.length > 5000) {
+            throw new AppError('Maximum 5000 IDs allowed per bulk operation', 400);
+        }
+        const objectIds = ids
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .map(id => new mongoose.Types.ObjectId(id));
+
+        if (objectIds.length === 0) {
+            throw new AppError('No valid product IDs provided', 400);
+        }
+        query._id = { $in: objectIds };
+    }
+
+    // Single updateMany — one DB round-trip regardless of how many products
+    const result = await Product.updateMany(query, { $set: { isActive } });
+
+    res.json({
+        success: true,
+        message: `${result.modifiedCount} product(s) updated to ${
+            isActive ? 'active' : 'private'
+        } mode.`,
+        data: {
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount,
+        },
+    });
+});
+
+/**
  * Get distinct metadata values (animeTag, category, store, subCategory, countries) from active products
  * @route GET /api/products/meta/filters
  * @access Public
@@ -523,17 +613,23 @@ export const getProductAnalytics = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const getAnalyticsProducts = asyncHandler(async (req, res) => {
-    const filter = {
-        isActive: true,
-        $or: [
-            { scheduledUploadTime: null },
-            { scheduledUploadTime: { $lte: new Date() } },
-        ],
-    };
+    const { includePrivate } = req.query;
+
+    // When includePrivate=true the analytics panel needs all products (including
+    // inactive ones) so the "Private Products" KPI card is accurate.
+    const filter = includePrivate === 'true'
+        ? {}   // no restriction — return every product
+        : {
+            isActive: true,
+            $or: [
+                { scheduledUploadTime: null },
+                { scheduledUploadTime: { $lte: new Date() } },
+            ],
+        };
 
     const products = await Product.find(filter)
         .select(
-            'title animeTag category subCategory store countries price currency rating inStock views clicks buyNowClicks images',
+            'title animeTag category subCategory store countries price currency rating inStock views clicks buyNowClicks images isActive',
         )
         .sort({ views: -1 })
         .lean();

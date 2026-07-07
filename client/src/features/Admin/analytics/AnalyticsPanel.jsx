@@ -7,6 +7,7 @@ import {
 	BarChart3,
 	Loader2,
 	RefreshCw,
+	EyeOff,
 } from "lucide-react";
 import apiClient from "../../../services/apiClient";
 import DrillDownChart from "./DrillDownChart";
@@ -49,6 +50,14 @@ const KPI_CONFIG = [
 		icon: MousePointer,
 		accent: "border-amber-500/40 text-amber-400/80",
 		format: formatNumber,
+	},
+	{
+		key: "privateProducts",
+		label: "Private Products",
+		sub: "Hidden from users",
+		icon: EyeOff,
+		accent: "border-rose-500/40 text-rose-400/80",
+		format: (v) => v.toLocaleString(),
 	},
 ];
 
@@ -246,7 +255,8 @@ const AnalyticsPanel = () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const res = await apiClient.get("/products/analytics/products");
+			// Fetch all products including inactive ones for accurate KPI counts
+			const res = await apiClient.get("/products/analytics/products?includePrivate=true");
 			if (res.data.success) {
 				setProducts(res.data.data.products || []);
 			} else {
@@ -303,7 +313,11 @@ const AnalyticsPanel = () => {
 						</h2>
 					</div>
 					<p className="text-sm text-zinc-500">
-						Live data from {products.length} active products
+						Live data from{" "}
+						<span className="text-violet-400 font-medium">{products.filter((p) => p.isActive !== false).length} active</span>
+						{" "}·{" "}
+						<span className="text-rose-400 font-medium">{products.filter((p) => p.isActive === false).length} private</span>
+						{" "}products
 					</p>
 				</div>
 				<button
@@ -317,12 +331,12 @@ const AnalyticsPanel = () => {
 				</button>
 			</div>
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{KPI_CONFIG.map(({ key, label, sub, icon, accent, format }) => (
 					<KpiCard
 						key={key}
 						label={label}
-						value={format(kpis[key])}
+						value={format(kpis[key] ?? 0)}
 						sub={sub}
 						icon={icon}
 						accent={accent}

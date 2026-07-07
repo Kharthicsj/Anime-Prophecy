@@ -14,6 +14,7 @@ import {
     trackProductBuyNowClick,
     getDistinctCountries,
     getDistinctMeta,
+    bulkUpdateVisibility,
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -82,6 +83,13 @@ router.post('/:id/buy-now-click', trackProductBuyNowClick);
  * @access Private/Admin
  */
 router.post('/', verifyToken, isAdmin, createProduct);
+
+/**
+ * @route PATCH /api/products/bulk-visibility
+ * @desc Bulk set isActive on many products — single DB updateMany, rate-limit safe
+ * @access Private/Admin
+ */
+router.patch('/bulk-visibility', verifyToken, isAdmin, bulkUpdateVisibility);
 
 /**
  * @route PUT /api/products/:id

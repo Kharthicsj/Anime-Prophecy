@@ -123,8 +123,9 @@ export function computeKPIs(products) {
 	const totalProducts = products.length;
 	const totalViews = products.reduce((s, p) => s + (p.views || 0), 0);
 	const totalClicks = products.reduce((s, p) => s + (p.clicks || 0), 0);
+	const privateProducts = products.filter((p) => p.isActive === false).length;
 
-	return { totalProducts, totalViews, totalClicks };
+	return { totalProducts, totalViews, totalClicks, privateProducts };
 }
 
 export function topProductsBy(products, field, limit = 8) {
