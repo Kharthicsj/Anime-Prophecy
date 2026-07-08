@@ -3,6 +3,7 @@ import GlobalSettings from '../models/GlobalSettings.js';
 import { asyncHandler, AppError } from '../utils/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
+import { getAliExpressProductDetails } from '../utils/aliexpressApi.js';
 
 /**
  * Get all products with filters
@@ -358,6 +359,143 @@ export const createProduct = asyncHandler(async (req, res) => {
         success: true,
         message: 'Product created successfully',
         data: { product: newProduct },
+    });
+});
+
+/**
+ * Fetch products from AliExpress in bulk for preview
+ * @route POST /api/products/admin/aliexpress/fetch
+ * @access Private/Admin
+ */
+export const fetchAliExpressBulk = asyncHandler(async (req, res) => {
+    const { productIds, targetCountry = 'Worldwide', targetCurrency = 'USD' } = req.body;
+
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+        throw new AppError('productIds array is required', 400);
+    }
+
+    if (productIds.length > 500) {
+        throw new AppError('Cannot fetch more than 500 products at a time to avoid timeout', 400);
+    }
+    
+    // Map currency to language loosely, default to EN
+    let targetLanguage = 'EN';
+    if (targetCurrency === 'JPY') targetLanguage = 'JA';
+    if (targetCurrency === 'EUR') targetLanguage = 'ES'; // Could be IT, FR, etc. Defaults to ES or EN in Ali
+    if (targetCurrency === 'KRW') targetLanguage = 'KO';
+
+    const results = [];
+    const errors = [];
+
+    // Chunk into arrays of 50 (AliExpress limit)
+    const chunkSize = 50;
+    for (let i = 0; i < productIds.length; i += chunkSize) {
+        const chunk = productIds.slice(i, i + chunkSize);
+        try {
+            const apiRes = await getAliExpressProductDetails(chunk, targetCurrency, targetLanguage);
+            if (apiRes?.resp_result?.result?.current_record_count > 0) {
+                const products = apiRes.resp_result.result.products.product || [];
+                // Standardize the response to match our preview UI needs
+                const formatted = products.map(p => ({
+                    affiliateProductId: p.product_id,
+                    affiliatePlatform: 'AliExpress',
+                    title: p.product_title,
+                    price: p.target_sale_price || p.target_original_price,
+                    currency: p.target_sale_price_currency || targetCurrency,
+                    images: [p.product_main_image_url, ...(p.product_small_image_urls?.string || [])].filter(Boolean),
+                    affiliateLink: p.promotion_link,
+                    category: p.first_level_category_name || 'Other',
+                    subCategory: p.second_level_category_name || '',
+                    store: 'AliExpress',
+                    rating: p.evaluate_rate ? Math.round((parseFloat(p.evaluate_rate) / 20) * 10) / 10 : 0,
+                    // Apply dynamic defaults
+                    animeTag: 'Other', 
+                    countries: [targetCountry]
+                }));
+                results.push(...formatted);
+            } else {
+                console.error("AliExpress API returned no products. Response:", JSON.stringify(apiRes));
+                errors.push(`Chunk starting at index ${i} returned no products. Response: ${apiRes?.resp_result?.resp_msg || 'Unknown API format'}`);
+            }
+        } catch (err) {
+            errors.push(`Failed chunk starting at index ${i}: ${err.message}`);
+        }
+        
+        // Wait 500ms between chunk requests to avoid rate limits
+        if (i + chunkSize < productIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    res.json({
+        success: true,
+        data: {
+            products: results,
+            errors: errors.length > 0 ? errors : undefined,
+            totalFetched: results.length
+        }
+    });
+});
+
+/**
+ * Bulk create products (Admin only) - Used for AliExpress bulk upload
+ * @route POST /api/products/admin/bulk
+ * @access Private/Admin
+ */
+export const bulkCreateProducts = asyncHandler(async (req, res) => {
+    const { products } = req.body;
+
+    if (!Array.isArray(products) || products.length === 0) {
+        throw new AppError('Products array is required', 400);
+    }
+
+    if (products.length > 500) {
+        throw new AppError('Cannot create more than 500 products at once', 400);
+    }
+
+    const productsToInsert = products.map(p => {
+        // Validate minimally required fields per product
+        if (!p.title || !p.animeTag || !p.store || !p.affiliateLink || !p.price || !p.category || !p.countries || !p.images) {
+            throw new AppError(`Missing required fields for product: ${p.title || 'Unknown'}`, 400);
+        }
+
+        // Format images
+        const formattedImages = Array.isArray(p.images) && typeof p.images[0] === 'string'
+            ? p.images.slice(0, 10).map((url, i) => ({ url, publicId: `external_ali_${Date.now()}_${i}`, isMain: i === 0 }))
+            : p.images;
+
+        return {
+            title: p.title,
+            description: p.description || p.title,
+            images: formattedImages,
+            videos: [],
+            animeTag: p.animeTag,
+            store: p.store,
+            affiliateLink: p.affiliateLink,
+            affiliatePlatform: p.affiliatePlatform || p.store,
+            affiliateProductId: p.affiliateProductId || null,
+            price: Number(p.price) || 0,
+            currency: p.currency || 'USD',
+            colors: p.colors || [],
+            sizes: p.sizes || [],
+            category: p.category,
+            subCategory: p.subCategory || '',
+            countries: Array.isArray(p.countries) ? p.countries : [p.countries],
+            inStock: p.inStock !== undefined ? p.inStock : true,
+            isActive: p.isActive !== undefined ? p.isActive : true,
+            rating: typeof p.rating === 'string' && p.rating.includes('%') 
+                ? Math.round((parseFloat(p.rating) / 20) * 10) / 10 
+                : Number(p.rating) || 0,
+            createdBy: req.user.id,
+        };
+    });
+
+    const result = await Product.insertMany(productsToInsert);
+
+    res.status(201).json({
+        success: true,
+        message: `${result.length} products created successfully.`,
+        data: { count: result.length },
     });
 });
 

@@ -15,6 +15,8 @@ import {
     getDistinctCountries,
     getDistinctMeta,
     bulkUpdateVisibility,
+    fetchAliExpressBulk,
+    bulkCreateProducts,
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -26,6 +28,20 @@ const router = express.Router();
  * @access Private/Admin
  */
 router.get('/admin/all', verifyToken, isAdmin, getAllProductsAdmin);
+
+/**
+ * @route POST /api/products/admin/aliexpress/fetch
+ * @desc Fetch bulk products from AliExpress Affiliate API
+ * @access Private/Admin
+ */
+router.post('/admin/aliexpress/fetch', verifyToken, isAdmin, fetchAliExpressBulk);
+
+/**
+ * @route POST /api/products/admin/bulk
+ * @desc Bulk create products
+ * @access Private/Admin
+ */
+router.post('/admin/bulk', verifyToken, isAdmin, bulkCreateProducts);
 
 /**
  * @route GET /api/products/analytics/stats

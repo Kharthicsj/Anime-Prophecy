@@ -175,6 +175,9 @@ const server = app.listen(PORT, () => {
 });
 
 import { initSocket } from './socket.js';
+import { initCronJobs } from './cron/priceSync.js';
+
 initSocket(server);
+initCronJobs();
 
 export default app;

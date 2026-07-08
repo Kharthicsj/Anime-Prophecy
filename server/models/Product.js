@@ -78,6 +78,15 @@ const productSchema = new mongoose.Schema(
             required: [true, 'Affiliate link is required'],
             match: [/^https?:\/\/.+/, 'Please provide a valid URL'],
         },
+        affiliatePlatform: {
+            type: String,
+            trim: true,
+            default: 'Unknown',
+        },
+        affiliateProductId: {
+            type: String,
+            trim: true,
+        },
         price: {
             type: Number,
             required: [true, 'Price is required'],

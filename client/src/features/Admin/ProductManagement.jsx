@@ -11,7 +11,9 @@ import { countries } from "../../utils/countries";
 import LoadingAnimation from "../../components/common/LoadingAnimation";
 import { SearchableDropdown } from "../../components/common/FilterPanel";
 import FilterBar from "../../components/common/FilterBar";
-import { FiCopy, FiX, FiRefreshCw, FiSearch, FiArrowDown } from "react-icons/fi";
+import { FiCopy, FiX, FiRefreshCw, FiSearch, FiArrowDown, FiLink, FiLock } from "react-icons/fi";
+import { SiAliexpress, SiFlipkart } from "react-icons/si";
+import { FaAmazon } from "react-icons/fa";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -399,6 +401,267 @@ const CopyProductModal = ({ onSelect, onClose }) => {
 						</>
 					)}
 				</div>
+			</div>
+		</div>
+	);
+};
+
+// ─── Affiliate Selection Modal ──────────────────────────────────────────────
+const AffiliateSelectionModal = ({ onClose, onSelect }) => {
+	const platforms = [
+		{ id: 'aliexpress', name: 'AliExpress', icon: <SiAliexpress />, color: 'orange-500', bg: 'hover:border-orange-500', desc: 'Fetch products using AliExpress API', warning: 'Requires VPN connection to avoid API timeouts.' },
+		{ id: 'amazon', name: 'Amazon (PA-API)', icon: <FaAmazon />, color: 'blue-500', bg: 'hover:border-blue-500', desc: 'Fetch products using Amazon Affiliate API (Coming Soon)' },
+		{ id: 'flipkart', name: 'Flipkart', icon: <SiFlipkart />, color: 'yellow-500', bg: 'hover:border-yellow-500', desc: 'Fetch products using Flipkart Affiliate API (Coming Soon)' },
+	];
+
+	return (
+		<div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+			<div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden">
+				<div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
+					<div>
+						<h2 className="text-xl font-bold text-white flex items-center gap-2">
+							<FiLink className="text-purple-500" /> Fetch Affiliate Products
+						</h2>
+						<p className="text-sm text-zinc-400 mt-1">Select the affiliate platform you want to import from.</p>
+					</div>
+					<button onClick={onClose} className="text-zinc-400 hover:text-white p-2">
+						<FiX className="w-5 h-5" />
+					</button>
+				</div>
+				<div className="p-6 bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+					{platforms.map((p) => (
+						<button
+							key={p.id}
+							onClick={() => p.id === 'aliexpress' ? onSelect(p.id) : null}
+							className={`text-left p-5 rounded-xl border flex flex-col gap-3 transition-all ${p.id === 'aliexpress' ? `bg-zinc-800 border-zinc-700 ${p.bg} cursor-pointer hover:shadow-lg text-white` : 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed text-zinc-500'}`}
+						>
+							<div className={`text-4xl text-${p.color}`}>{p.icon}</div>
+							<div className="w-full">
+								<h3 className={`text-lg font-bold text-${p.color}`}>{p.name}</h3>
+								<p className="text-xs text-zinc-400 leading-relaxed mt-1">{p.desc}</p>
+								{p.warning && <div className="mt-3 text-xs font-semibold text-orange-400 bg-orange-950/40 p-2 rounded border border-orange-900/50">⚠️ {p.warning}</div>}
+							</div>
+						</button>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+};
+
+// ─── Affiliate Bulk Upload Modal ──────────────────────────────────────────────
+const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
+	const [productIdsInput, setProductIdsInput] = useState("");
+	const [defaultAnimeTag, setDefaultAnimeTag] = useState("Other");
+	const [targetCountry, setTargetCountry] = useState("Worldwide");
+	const [targetCurrency, setTargetCurrency] = useState("USD");
+	const [products, setProducts] = useState([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+	const [error, setError] = useState("");
+	const [successMsg, setSuccessMsg] = useState("");
+
+	const CURRENCIES = ["USD", "INR", "JPY", "EUR", "GBP", "KRW"];
+
+	const handleFetch = async () => {
+		if (!productIdsInput.trim()) {
+			setError("Please enter at least one Product ID.");
+			return;
+		}
+
+		// Split by comma, newline, or space to allow direct Excel column pasting
+		const ids = productIdsInput
+			.split(/[\s,]+/)
+			.map((id) => id.trim())
+			.filter(Boolean);
+
+		if (ids.length === 0) {
+			setError("No valid Product IDs found.");
+			return;
+		}
+
+		if (ids.length > 500) {
+			setError("Max 500 products at a time allowed.");
+			return;
+		}
+
+		setIsLoading(true);
+		setError("");
+		setProducts([]);
+
+		try {
+			// Currently only aliexpress backend route is implemented, but frontend is ready
+			const endpoint = platform === 'aliexpress' ? "/products/admin/aliexpress/fetch" : `/products/admin/${platform}/fetch`;
+			const res = await apiClient.post(endpoint, { 
+				productIds: ids,
+				targetCountry,
+				targetCurrency
+			});
+			const fetchedProducts = res.data?.data?.products || [];
+			if (fetchedProducts.length === 0) {
+				const backendErrors = res.data?.data?.errors;
+				if (backendErrors && backendErrors.length > 0) {
+					setError(`API Error: ${backendErrors[0]}`);
+				} else {
+					setError("No products found for the given IDs.");
+				}
+			} else {
+				setProducts(fetchedProducts);
+				if (res.data?.data?.errors?.length > 0) {
+					console.warn("Some chunks failed:", res.data.data.errors);
+					setError(`Warning: Some chunks failed: ${res.data.data.errors[0]}`);
+				}
+			}
+		} catch (err) {
+			setError(err.response?.data?.message || "Failed to fetch products from AliExpress.");
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleSaveAll = async () => {
+		if (products.length === 0) return;
+		setIsSaving(true);
+		setError("");
+		
+		try {
+			// Apply default animeTag to all products before saving
+			const productsToSave = products.map(p => ({
+				...p,
+				animeTag: defaultAnimeTag,
+				affiliatePlatform: platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform
+			}));
+			
+			const res = await apiClient.post("/products/admin/bulk", { products: productsToSave });
+			setSuccessMsg(`${res.data.data.count} products saved successfully!`);
+			setIsSaving(false);
+			setTimeout(() => {
+				onUploadSuccess();
+				onClose();
+			}, 5000);
+		} catch (err) {
+			setError(err.response?.data?.message || "Failed to save products.");
+			setIsSaving(false);
+		}
+	};
+
+	return (
+		<div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-hidden">
+			<div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+				{/* Sticky Top Section */}
+				<div className="sticky top-0 z-10 bg-zinc-900 shadow-md shrink-0 border-b border-zinc-800 rounded-t-2xl">
+					{/* Header */}
+					<div className="p-5 flex justify-between items-center">
+						<div>
+							<h2 className="text-xl font-bold text-white flex items-center gap-2 capitalize">
+								{platform === 'aliexpress' && <SiAliexpress className="text-orange-500 text-2xl" />}
+								{platform === 'amazon' && <FaAmazon className="text-blue-500 text-2xl" />}
+								{platform === 'flipkart' && <SiFlipkart className="text-yellow-500 text-2xl" />}
+								{platform} Bulk Handler
+							</h2>
+							<p className="text-sm text-zinc-400 mt-1 capitalize">
+								Fetch multiple products from {platform} using Product IDs.
+							</p>
+						</div>
+						<button onClick={onClose} className="text-zinc-400 hover:text-white p-2">
+							<FiX className="w-5 h-5" />
+						</button>
+					</div>
+
+					{/* Controls */}
+					<div className="px-5 pb-5 bg-zinc-900 space-y-3">
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-semibold text-zinc-400">Product IDs (Comma-separated or newline)</label>
+							<textarea
+								value={productIdsInput}
+								onChange={(e) => setProductIdsInput(e.target.value)}
+								placeholder="e.g., 1005001234567, 1005007654321"
+								className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-orange-500 text-sm"
+								rows={2}
+							/>
+						</div>
+						<div className="flex flex-wrap items-end gap-3">
+							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+								<label className="text-xs font-semibold text-zinc-400">Store / Platform</label>
+								<input
+									type="text"
+									value={platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform}
+									disabled
+									className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-500 text-sm cursor-not-allowed capitalize"
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+								<label className="text-xs font-semibold text-zinc-400">Target Country</label>
+								<select
+									value={targetCountry}
+									onChange={(e) => setTargetCountry(e.target.value)}
+									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
+								>
+									<option value="Worldwide">Worldwide</option>
+									{countries.map((c, idx) => (
+										<option key={`country-${idx}`} value={c.value || c.name || c}>{c.label || c.name || c}</option>
+									))}
+								</select>
+							</div>
+							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+								<label className="text-xs font-semibold text-zinc-400">Target Currency</label>
+								<select
+									value={targetCurrency}
+									onChange={(e) => setTargetCurrency(e.target.value)}
+									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
+								>
+									{CURRENCIES.map((curr, idx) => (
+										<option key={`curr-${idx}`} value={curr}>{curr}</option>
+									))}
+								</select>
+							</div>
+							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+								<label className="text-xs font-semibold text-zinc-400">Default Anime Tag</label>
+								<select
+									value={defaultAnimeTag}
+									onChange={(e) => setDefaultAnimeTag(e.target.value)}
+									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
+								>
+									{ANIME_OPTIONS.map((tag, idx) => (
+										<option key={`tag-${idx}`} value={tag}>{tag}</option>
+									))}
+								</select>
+							</div>
+							<Button onClick={handleFetch} disabled={isLoading || isSaving} className="bg-orange-600 hover:bg-orange-700 flex-1 min-w-[150px] text-sm py-2">
+								{isLoading ? "Fetching..." : "Fetch Products"}
+							</Button>
+						</div>
+						{error && <div className="text-red-400 bg-red-900/20 border border-red-800/50 p-2 rounded-lg text-xs">{error}</div>}
+						{successMsg && <div className="text-green-400 bg-green-900/20 border border-green-800/50 p-2 rounded-lg text-xs">{successMsg}</div>}
+					</div>
+				</div>
+
+				{/* Preview Grid */}
+				<div className="overflow-y-auto flex-1 p-5 bg-black/20">
+					{products.length === 0 ? (
+						<div className="text-center text-zinc-500 py-12 text-sm">No products loaded yet. Enter IDs and fetch.</div>
+					) : (
+						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+							{products.map((p, i) => (
+								<div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden p-3 hover:border-orange-500/50 transition-colors">
+									<img src={p.images[0]} alt="" className="w-full aspect-square object-cover rounded-lg mb-2 bg-zinc-800" />
+									<h4 className="text-xs text-white line-clamp-2 mb-1 leading-snug">{p.title}</h4>
+									<div className="text-orange-400 text-sm font-bold">${p.price}</div>
+								</div>
+							))}
+						</div>
+					)}
+				</div>
+
+				{/* Footer */}
+				{products.length > 0 && (
+					<div className="p-4 border-t border-zinc-800 shrink-0 flex justify-end gap-3 bg-zinc-900 rounded-b-2xl">
+						<Button onClick={() => setProducts([])} variant="secondary" className="text-sm">Clear</Button>
+						<Button onClick={handleSaveAll} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-sm">
+							{isSaving ? "Saving..." : `Save ${products.length} Products`}
+						</Button>
+					</div>
+				)}
 			</div>
 		</div>
 	);
@@ -847,6 +1110,8 @@ const ProductManagement = () => {
 	const [filterStatus, setFilterStatus] = useState("All");
 	const [showScheduledModal, setShowScheduledModal] = useState(false);
 	const [showPrivateModal, setShowPrivateModal] = useState(false);
+	const [showAffiliateModal, setShowAffiliateModal] = useState(false);
+	const [selectedAffiliatePlatform, setSelectedAffiliatePlatform] = useState(null);
 
 	// Pagination & Infinite Scroll states
 	const [currentPage, setCurrentPage] = useState(1);
@@ -1915,9 +2180,16 @@ const ProductManagement = () => {
 									<Button
 										onClick={() => setShowPrivateModal(true)}
 										variant="secondary"
-										className="border border-rose-500/30 hover:border-rose-500 text-rose-400 hover:text-rose-300"
+										className="border border-rose-500/30 hover:border-rose-500 text-rose-400 hover:text-rose-300 flex items-center gap-2"
 									>
-										🔒 Manage Private
+										<FiLock /> Manage Private
+									</Button>
+									<Button
+										onClick={() => setShowAffiliateModal(true)}
+										variant="secondary"
+										className="border border-purple-500/30 hover:border-purple-500 text-purple-400 hover:text-purple-300 flex items-center gap-2"
+									>
+										<FiLink /> Fetch Affiliates
 									</Button>
 									<Button
 										onClick={openCreate}
@@ -2831,6 +3103,29 @@ const ProductManagement = () => {
 						</div>
 					</div>
 				</div>
+			)}
+			{/* Affiliate Selection Modal */}
+			{showAffiliateModal && (
+				<AffiliateSelectionModal
+					onClose={() => setShowAffiliateModal(false)}
+					onSelect={(platformId) => {
+						setShowAffiliateModal(false);
+						setSelectedAffiliatePlatform(platformId);
+					}}
+				/>
+			)}
+
+			{selectedAffiliatePlatform && (
+				<AffiliateBulkModal
+					platform={selectedAffiliatePlatform}
+					onClose={() => setSelectedAffiliatePlatform(null)}
+					onUploadSuccess={() => {
+						setProducts([]);
+						setCurrentPage(1);
+						setHasMore(true);
+						fetchProducts(1, true);
+					}}
+				/>
 			)}
 		</div>
 	);
