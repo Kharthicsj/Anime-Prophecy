@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-const SearchableSelect = ({ options, value, onChange, name, placeholder = "Select an option" }) => {
+const SearchableSelect = ({ options, value, onChange, name, placeholder = "Select an option", upwards = false }) => {
 	const [search, setSearch] = useState("");
 	const [open, setOpen] = useState(false);
 	const wrapperRef = useRef(null);
@@ -43,7 +43,7 @@ const SearchableSelect = ({ options, value, onChange, name, placeholder = "Selec
 			</div>
 
 			{open && (
-				<div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+				<div className={`absolute z-50 w-full bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden ${upwards ? "bottom-full mb-1" : "top-full mt-1"}`}>
 					<div className="p-2 border-b border-zinc-700">
 						<input
 							type="text"

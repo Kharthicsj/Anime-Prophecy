@@ -93,6 +93,15 @@ const STORE_OPTIONS = ["Amazon", "Flipkart", "Etsy", "eBay", "AliExpress", "Othe
 const CATEGORY_OPTIONS = [
 	"Clothing", "Electronics", "Posters", "Gadgets", "Figures", "Accessories", "Cosplay", "Other"
 ];
+const SUB_CATEGORY_MAP = {
+	"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets"],
+	"Electronics": ["Mouse Pads", "Phone Cases", "Keyboards", "Headphones"],
+	"Posters": ["Canvas Print", "Paper Poster", "Metal Print", "Framed Poster"],
+	"Gadgets": ["Keychains", "Mugs", "Lamps"],
+	"Figures": ["Action Figure", "Statue", "Funko Pop", "Nendoroid"],
+	"Accessories": ["Necklace", "Bracelet", "Ring", "Earrings", "Bag"],
+	"Cosplay": ["Costume", "Props", "Wigs"],
+};
 
 // ─── Currency Searchable Select ───────────────────────────────────────────────
 const CurrencySearchableSelect = ({ currencies, value, onChange, name }) => {
@@ -450,9 +459,14 @@ const AffiliateSelectionModal = ({ onClose, onSelect }) => {
 };
 
 // ─── Affiliate Bulk Upload Modal ──────────────────────────────────────────────
-const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
+const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptions, formCategoryOptions }) => {
 	const [productIdsInput, setProductIdsInput] = useState("");
-	const [defaultAnimeTag, setDefaultAnimeTag] = useState("Other");
+	const [defaultAnimeTag, setDefaultAnimeTag] = useState("Demon Slayer");
+	const [customAnimeTag, setCustomAnimeTag] = useState("");
+	const [defaultCategory, setDefaultCategory] = useState("Figures");
+	const [customCategory, setCustomCategory] = useState("");
+	const [defaultSubCategory, setDefaultSubCategory] = useState("Action Figure");
+	const [customSubCategory, setCustomSubCategory] = useState("");
 	const [targetCountry, setTargetCountry] = useState("Worldwide");
 	const [targetCurrency, setTargetCurrency] = useState("USD");
 	const [products, setProducts] = useState([]);
@@ -525,10 +539,16 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
 		setError("");
 		
 		try {
-			// Apply default animeTag to all products before saving
+			// Apply default animeTag, category, and subCategory to all products before saving
+			const finalAnimeTag = defaultAnimeTag === "Other" ? customAnimeTag : defaultAnimeTag;
+			const finalCategory = defaultCategory === "Other" ? customCategory : defaultCategory;
+			const finalSubCategory = defaultSubCategory === "Other" ? customSubCategory : defaultSubCategory;
+			
 			const productsToSave = products.map(p => ({
 				...p,
-				animeTag: defaultAnimeTag,
+				animeTag: finalAnimeTag,
+				category: finalCategory,
+				subCategory: finalSubCategory,
 				affiliatePlatform: platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform
 			}));
 			
@@ -538,7 +558,7 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
 			setTimeout(() => {
 				onUploadSuccess();
 				onClose();
-			}, 5000);
+			}, 2000);
 		} catch (err) {
 			setError(err.response?.data?.message || "Failed to save products.");
 			setIsSaving(false);
@@ -547,7 +567,7 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
 
 	return (
 		<div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-hidden">
-			<div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+			<div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl">
 				{/* Sticky Top Section */}
 				<div className="sticky top-0 z-10 bg-zinc-900 shadow-md shrink-0 border-b border-zinc-800 rounded-t-2xl">
 					{/* Header */}
@@ -569,71 +589,60 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
 					</div>
 
 					{/* Controls */}
-					<div className="px-5 pb-5 bg-zinc-900 space-y-3">
-						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-semibold text-zinc-400">Product IDs (Comma-separated or newline)</label>
-							<textarea
-								value={productIdsInput}
-								onChange={(e) => setProductIdsInput(e.target.value)}
-								placeholder="e.g., 1005001234567, 1005007654321"
-								className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-orange-500 text-sm"
-								rows={2}
-							/>
-						</div>
-						<div className="flex flex-wrap items-end gap-3">
-							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-								<label className="text-xs font-semibold text-zinc-400">Store / Platform</label>
-								<input
-									type="text"
-									value={platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform}
-									disabled
-									className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-500 text-sm cursor-not-allowed capitalize"
+					{products.length === 0 && (
+						<div className="px-5 pb-5 bg-zinc-900 space-y-3">
+							<div className="flex flex-col gap-1.5">
+								<label className="text-xs font-semibold text-zinc-400">Product IDs (Comma-separated or newline)</label>
+								<textarea
+									value={productIdsInput}
+									onChange={(e) => setProductIdsInput(e.target.value)}
+									placeholder="e.g., 1005001234567, 1005007654321"
+									className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-orange-500 text-sm"
+									rows={2}
 								/>
 							</div>
-							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-								<label className="text-xs font-semibold text-zinc-400">Target Country</label>
-								<select
-									value={targetCountry}
-									onChange={(e) => setTargetCountry(e.target.value)}
-									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
-								>
-									<option value="Worldwide">Worldwide</option>
-									{countries.map((c, idx) => (
-										<option key={`country-${idx}`} value={c.value || c.name || c}>{c.label || c.name || c}</option>
-									))}
-								</select>
+							<div className="flex flex-wrap items-end gap-3">
+								<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+									<label className="text-xs font-semibold text-zinc-400">Store / Platform</label>
+									<input
+										type="text"
+										value={platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform}
+										disabled
+										className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-500 text-sm cursor-not-allowed capitalize"
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+									<label className="text-xs font-semibold text-zinc-400">Target Country</label>
+									<select
+										value={targetCountry}
+										onChange={(e) => setTargetCountry(e.target.value)}
+										className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
+									>
+										<option value="Worldwide">Worldwide</option>
+										{countries.map((c, idx) => (
+											<option key={`country-${idx}`} value={c.value || c.name || c}>{c.label || c.name || c}</option>
+										))}
+									</select>
+								</div>
+								<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+									<label className="text-xs font-semibold text-zinc-400">Target Currency</label>
+									<select
+										value={targetCurrency}
+										onChange={(e) => setTargetCurrency(e.target.value)}
+										className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
+									>
+										{CURRENCIES.map((curr, idx) => (
+											<option key={`curr-${idx}`} value={curr}>{curr}</option>
+										))}
+									</select>
+								</div>
+
+								<Button onClick={handleFetch} disabled={isLoading || isSaving} className="bg-orange-600 hover:bg-orange-700 flex-1 min-w-[150px] text-sm py-2">
+									{isLoading ? "Fetching..." : "Fetch Products"}
+								</Button>
 							</div>
-							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-								<label className="text-xs font-semibold text-zinc-400">Target Currency</label>
-								<select
-									value={targetCurrency}
-									onChange={(e) => setTargetCurrency(e.target.value)}
-									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
-								>
-									{CURRENCIES.map((curr, idx) => (
-										<option key={`curr-${idx}`} value={curr}>{curr}</option>
-									))}
-								</select>
-							</div>
-							<div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-								<label className="text-xs font-semibold text-zinc-400">Default Anime Tag</label>
-								<select
-									value={defaultAnimeTag}
-									onChange={(e) => setDefaultAnimeTag(e.target.value)}
-									className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm"
-								>
-									{ANIME_OPTIONS.map((tag, idx) => (
-										<option key={`tag-${idx}`} value={tag}>{tag}</option>
-									))}
-								</select>
-							</div>
-							<Button onClick={handleFetch} disabled={isLoading || isSaving} className="bg-orange-600 hover:bg-orange-700 flex-1 min-w-[150px] text-sm py-2">
-								{isLoading ? "Fetching..." : "Fetch Products"}
-							</Button>
 						</div>
-						{error && <div className="text-red-400 bg-red-900/20 border border-red-800/50 p-2 rounded-lg text-xs">{error}</div>}
-						{successMsg && <div className="text-green-400 bg-green-900/20 border border-green-800/50 p-2 rounded-lg text-xs">{successMsg}</div>}
-					</div>
+					)}
 				</div>
 
 				{/* Preview Grid */}
@@ -655,11 +664,86 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess }) => {
 
 				{/* Footer */}
 				{products.length > 0 && (
-					<div className="p-4 border-t border-zinc-800 shrink-0 flex justify-end gap-3 bg-zinc-900 rounded-b-2xl">
-						<Button onClick={() => setProducts([])} variant="secondary" className="text-sm">Clear</Button>
-						<Button onClick={handleSaveAll} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-sm">
-							{isSaving ? "Saving..." : `Save ${products.length} Products`}
-						</Button>
+					<div className="p-5 border-t border-zinc-800 shrink-0 bg-zinc-900 rounded-b-2xl flex flex-col gap-5">
+						<div className="flex flex-col mb-1">
+							<h3 className="text-sm font-semibold text-zinc-200 mb-3">Classify Extracted Products</h3>
+							<div className="flex flex-wrap items-start gap-4">
+								<div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+									<label className="text-xs font-semibold text-zinc-400">Anime Tag <span className="text-red-500">*</span></label>
+									<SearchableSelect
+										name="defaultAnimeTag"
+										value={defaultAnimeTag}
+										onChange={(e) => setDefaultAnimeTag(e.target.value)}
+										options={formAnimeOptions}
+										placeholder="Select Anime"
+										upwards={true}
+									/>
+									{defaultAnimeTag === "Other" && (
+										<Input
+											placeholder="Enter custom anime"
+											value={customAnimeTag}
+											onChange={(e) => setCustomAnimeTag(e.target.value)}
+											required
+											className="mt-1"
+										/>
+									)}
+								</div>
+								<div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+									<label className="text-xs font-semibold text-zinc-400">Category <span className="text-red-500">*</span></label>
+									<SearchableSelect
+										name="defaultCategory"
+										value={defaultCategory}
+										onChange={(e) => {
+											setDefaultCategory(e.target.value);
+											setDefaultSubCategory("");
+										}}
+										options={formCategoryOptions}
+										placeholder="Select Category"
+										upwards={true}
+									/>
+									{defaultCategory === "Other" && (
+										<Input
+											placeholder="Enter custom category"
+											value={customCategory}
+											onChange={(e) => setCustomCategory(e.target.value)}
+											required
+											className="mt-1"
+										/>
+									)}
+								</div>
+								{(SUB_CATEGORY_MAP[defaultCategory]?.length > 0 || defaultCategory === "Other") && (
+									<div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+										<label className="text-xs font-semibold text-zinc-400">SubCategory <span className="text-red-500">*</span></label>
+										<SearchableSelect
+											name="defaultSubCategory"
+											value={defaultSubCategory}
+											onChange={(e) => setDefaultSubCategory(e.target.value)}
+											options={[...(SUB_CATEGORY_MAP[defaultCategory] || []), "Other"]}
+											placeholder="Select SubCategory"
+											upwards={true}
+										/>
+										{defaultSubCategory === "Other" && (
+											<Input
+												placeholder="Specify subcategory"
+												value={customSubCategory}
+												onChange={(e) => setCustomSubCategory(e.target.value)}
+												required
+												className="mt-1"
+											/>
+										)}
+									</div>
+								)}
+							</div>
+						</div>
+						
+						{error && <div className="text-red-400 bg-red-900/20 border border-red-800/50 p-2 rounded-lg text-xs mt-2">{error}</div>}
+						{successMsg && <div className="text-green-400 bg-green-900/20 border border-green-800/50 p-2 rounded-lg text-xs mt-2">{successMsg}</div>}
+						<div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+							<Button onClick={() => setProducts([])} variant="secondary" className="text-sm">Clear Grid</Button>
+							<Button onClick={handleSaveAll} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-sm">
+								{isSaving ? "Saving..." : `Save ${products.length} Products`}
+							</Button>
+						</div>
 					</div>
 				)}
 			</div>
@@ -854,6 +938,53 @@ const PrivateProductsModal = ({ onClose, onPrivacyChanged }) => {
 		}
 	};
 
+	const handleBulkDelete = async () => {
+		if (selectedCount === 0) return;
+		if (!window.confirm(`Are you sure you want to permanently delete ${selectedCount} product(s)? This cannot be undone.`)) return;
+		
+		setIsConverting(true);
+		setErrorMsg("");
+		try {
+			let body;
+			if (selectAllMode) {
+				body = {
+					applyToAll: true,
+					filters: {
+						search: selectedFilters.search || "",
+						animeTag: selectedFilters.animeTag,
+						category: selectedFilters.category,
+						store: selectedFilters.store,
+						country: selectedFilters.country,
+						status: selectedFilters.status === "Inactive (Private)" ? "inactive"
+							: selectedFilters.status === "All Statuses" ? ""
+							: selectedFilters.status.toLowerCase(),
+					},
+				};
+			} else {
+				body = { ids: [...selectedIds] };
+			}
+
+			const res = await apiClient.delete("/products/bulk-delete", { data: body });
+			const { deletedCount } = res.data?.data || {};
+			setSuccessMsg(`${deletedCount ?? selectedCount} product(s) deleted successfully.`);
+			setSelectedIds(new Set());
+			setSelectAllMode(false);
+			setProducts([]);
+			setCurrentPage(1);
+			setHasMore(true);
+			fetchPage(1, true);
+			onPrivacyChanged();
+			setTimeout(() => setSuccessMsg(""), 5000);
+		} catch (err) {
+			const msg = err.response?.data?.message || "Delete failed. Please try again.";
+			setErrorMsg(msg);
+			setTimeout(() => setErrorMsg(""), 5000);
+			console.error("Bulk delete failed", err);
+		} finally {
+			setIsConverting(false);
+		}
+	};
+
 	// How many products the action will affect
 	const selectedCount = selectAllMode ? totalProducts : selectedIds.size;
 	// Whether ALL loaded cards are checked
@@ -873,10 +1004,10 @@ const PrivateProductsModal = ({ onClose, onPrivacyChanged }) => {
 				<div className="p-6 border-b border-zinc-800 flex items-center justify-between gap-4 bg-zinc-900 shrink-0">
 					<div>
 						<h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-							<span className="text-rose-400">🔒</span> Manage Private Products
+							<span className="text-rose-400">📦</span> Manage Products
 						</h2>
 						<p className="text-sm text-zinc-400 mt-1">
-							Select products and convert them to <span className="text-rose-400 font-medium">private mode</span> — hidden from all users on the site.
+							Select products in bulk to change their visibility or permanently delete them from the database.
 						</p>
 					</div>
 					<button
@@ -944,6 +1075,13 @@ const PrivateProductsModal = ({ onClose, onPrivacyChanged }) => {
 											✓ {isConverting ? "Updating..." : `Make Active (${selectedCount})`}
 										</button>
 									)}
+									<button
+										onClick={handleBulkDelete}
+										disabled={isConverting}
+										className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white transition-all shadow-lg shadow-red-900/30 border border-red-500 ml-2"
+									>
+										🗑️ {isConverting ? "Deleting..." : `Delete Selected (${selectedCount})`}
+									</button>
 								</>
 							)}
 						</div>
@@ -1180,16 +1318,8 @@ const ProductManagement = () => {
 		fetchMeta();
 	}, []);
 
-	// Subcategory map: which categories have subcategories and what they are
-	const subCategoryMap = {
-		"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets"],
-		"Electronics": ["Mouse Pads", "Phone Cases", "Keyboards", "Headphones"],
-		"Posters": ["Canvas Print", "Paper Poster", "Metal Print", "Framed Poster"],
-		"Gadgets": ["Keychains", "Mugs", "Lamps"],
-		"Figures": ["Action Figure", "Statue", "Funko Pop", "Nendoroid"],
-		"Accessories": ["Necklace", "Bracelet", "Ring", "Earrings", "Bag"],
-		"Cosplay": ["Costume", "Props", "Wigs"],
-	};
+	// Subcategory map is now module-level SUB_CATEGORY_MAP
+	const subCategoryMap = SUB_CATEGORY_MAP;
 
 	// Use module-level constants (stable references)
 	const animeOptions = ANIME_OPTIONS;
@@ -2182,7 +2312,7 @@ const ProductManagement = () => {
 										variant="secondary"
 										className="border border-rose-500/30 hover:border-rose-500 text-rose-400 hover:text-rose-300 flex items-center gap-2"
 									>
-										<FiLock /> Manage Private
+										<FiLock /> Manage Products
 									</Button>
 									<Button
 										onClick={() => setShowAffiliateModal(true)}
@@ -3125,6 +3255,8 @@ const ProductManagement = () => {
 						setHasMore(true);
 						fetchProducts(1, true);
 					}}
+					formAnimeOptions={formAnimeOptions}
+					formCategoryOptions={formCategoryOptions}
 				/>
 			)}
 		</div>

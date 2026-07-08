@@ -35,24 +35,18 @@ export const getAllProducts = asyncHandler(async (req, res) => {
         ],
     };
 
-    if (country === 'Worldwide') {
-        if (regionCountry && regionCountry !== 'All Countries') {
-            const regionCountriesArr = regionCountry.split(',');
-            filter.$and.push({
-                $or: [
-                    { countries: { $in: regionCountriesArr } },
-                    { countries: 'Worldwide' },
-                ],
-            });
-        }
-    } else {
-        filter.$and.push({
-            $or: [
-                { countries: country },
-                { countries: 'Worldwide' },
-            ],
-        });
-    }
+	if (country === 'Worldwide') {
+		if (regionCountry && regionCountry !== 'All Countries') {
+			const regionCountriesArr = regionCountry.split(',');
+			filter.$and.push({
+				countries: { $in: regionCountriesArr }
+			});
+		}
+	} else {
+		filter.$and.push({
+			countries: country
+		});
+	}
 
     if (animeTag && animeTag !== 'All Anime') {
         filter.animeTag = { $in: animeTag.split(',') };
@@ -665,6 +659,62 @@ export const bulkUpdateVisibility = asyncHandler(async (req, res) => {
         data: {
             modifiedCount: result.modifiedCount,
             matchedCount: result.matchedCount,
+        },
+    });
+});
+
+/**
+ * Bulk delete products in one DB operation
+ * @route DELETE /api/products/bulk-delete
+ * @access Private/Admin
+ */
+export const bulkDeleteProducts = asyncHandler(async (req, res) => {
+    const { ids, applyToAll, filters } = req.body;
+    let query = {};
+
+    if (applyToAll) {
+        if (!filters || typeof filters !== 'object') {
+            throw new AppError('Filters object is required when applyToAll is true', 400);
+        }
+        if (filters.animeTag && filters.animeTag !== 'All Anime') query.animeTag = filters.animeTag;
+        if (filters.category && filters.category !== 'All Categories') query.category = filters.category;
+        if (filters.store && filters.store !== 'All Stores') query.store = filters.store;
+        if (filters.status) {
+            if (filters.status === 'inactive') query.isActive = false;
+            else if (filters.status === 'active') query.isActive = true;
+        }
+        if (filters.country && filters.country !== 'All Countries') query.countries = filters.country;
+        if (filters.search?.trim()) {
+            const q = filters.search.trim();
+            query.$or = [
+                { title: { $regex: q, $options: 'i' } },
+                { animeTag: { $regex: q, $options: 'i' } },
+            ];
+        }
+    } else {
+        if (!Array.isArray(ids) || ids.length === 0) {
+            throw new AppError('ids must be a non-empty array', 400);
+        }
+        if (ids.length > 5000) {
+            throw new AppError('Maximum 5000 IDs allowed per bulk operation', 400);
+        }
+        const objectIds = ids
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .map(id => new mongoose.Types.ObjectId(id));
+
+        if (objectIds.length === 0) {
+            throw new AppError('No valid product IDs provided', 400);
+        }
+        query._id = { $in: objectIds };
+    }
+
+    const result = await Product.deleteMany(query);
+
+    res.json({
+        success: true,
+        message: `${result.deletedCount} product(s) deleted successfully.`,
+        data: {
+            deletedCount: result.deletedCount,
         },
     });
 });

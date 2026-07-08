@@ -17,6 +17,7 @@ import {
     bulkUpdateVisibility,
     fetchAliExpressBulk,
     bulkCreateProducts,
+    bulkDeleteProducts,
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -106,6 +107,13 @@ router.post('/', verifyToken, isAdmin, createProduct);
  * @access Private/Admin
  */
 router.patch('/bulk-visibility', verifyToken, isAdmin, bulkUpdateVisibility);
+
+/**
+ * @route DELETE /api/products/bulk-delete
+ * @desc Bulk delete products in one DB operation
+ * @access Private/Admin
+ */
+router.delete('/bulk-delete', verifyToken, isAdmin, bulkDeleteProducts);
 
 /**
  * @route PUT /api/products/:id
