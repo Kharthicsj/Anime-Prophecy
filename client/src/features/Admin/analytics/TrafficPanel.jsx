@@ -11,6 +11,71 @@ const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const COLORS = ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
 
+// PostHog internal labels that should be hidden or remapped
+const POSTHOG_INTERNAL_LABELS = [
+    '$$_posthog_breakdown_other_$$',
+    '$__null__',
+];
+
+// Remap common PostHog internal referrer labels
+const remapLabel = (name, defaultLabel) => {
+    if (!name || name === '' || name === '$direct') return defaultLabel;
+    if (POSTHOG_INTERNAL_LABELS.includes(name)) return null; // filter out
+    return name;
+};
+
+// PostHog country name → world-atlas GeoJSON name mapping
+// (world-atlas uses full official names, PostHog uses common names)
+const COUNTRY_NAME_MAP = {
+    'United States':        'United States of America',
+    'United Kingdom':       'United Kingdom',
+    'South Korea':          'Republic of Korea',
+    'North Korea':          'Dem. Rep. Korea',
+    'Russia':               'Russia',
+    'Iran':                 'Iran',
+    'Syria':                'Syria',
+    'Tanzania':             'Tanzania',
+    'DR Congo':             'Dem. Rep. Congo',
+    'Czech Republic':       'Czechia',
+    'Taiwan':               'Taiwan',
+    'Palestine':            'Palestine',
+    'Ivory Coast':          "Côte d'Ivoire",
+    'Bosnia and Herzegovina': 'Bosnia and Herz.',
+    'Dominican Republic':   'Dominican Rep.',
+    'Central African Republic': 'Central African Rep.',
+    'Equatorial Guinea':    'Eq. Guinea',
+    'Western Sahara':       'W. Sahara',
+    'Solomon Islands':      'Solomon Is.',
+    'Timor-Leste':          'Timor-Leste',
+};
+
+// Resolve a PostHog country name to the GeoJSON name for matching
+const resolveGeoName = (posthogName) =>
+    COUNTRY_NAME_MAP[posthogName] || posthogName;
+
+// Check if a PostHog country name matches a GeoJSON country name
+const countryMatches = (posthogName, geoName) => {
+    const resolved = resolveGeoName(posthogName);
+    return (
+        resolved === geoName ||
+        resolved.toLowerCase() === geoName.toLowerCase() ||
+        posthogName === geoName ||
+        posthogName.toLowerCase() === geoName.toLowerCase()
+    );
+};
+
+// Generate choropleth color for a country based on its rank
+const getCountryColor = (rank, total) => {
+    if (total === 0) return '#27272a';
+    // From deep indigo/violet for rank 1 to a light blue-gray for last rank
+    const intensity = 1 - (rank / (total + 1)); // 1.0 → 0.0
+    // Interpolate: high traffic = deep #4f46e5 (indigo-600), low = #93c5fd (blue-300)
+    const r = Math.round(79  + (147 - 79)  * (1 - intensity));
+    const g = Math.round(70  + (197 - 70)  * (1 - intensity));
+    const b = Math.round(229 + (253 - 229) * (1 - intensity));
+    return `rgb(${r},${g},${b})`;
+};
+
 const TrafficPanel = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -93,11 +158,11 @@ const TrafficPanel = () => {
         return rawData
             .map(item => {
                 const total = item.aggregated_value ?? item.data?.reduce((a, b) => a + b, 0) ?? 0;
-                let name = item.label;
-                if (!name || name === "$direct" || name === "") name = defaultLabel;
-                return { name, value: total };
+                const mapped = remapLabel(item.label, defaultLabel);
+                if (mapped === null) return null; // filter internal PostHog labels
+                return { name: mapped, value: total };
             })
-            .filter(item => item.value > 0)
+            .filter(item => item !== null && item.value > 0)
             .sort((a, b) => b.value - a.value)
             .slice(0, limit);
     };
@@ -247,9 +312,9 @@ const TrafficPanel = () => {
                             {pathsData.map((item, idx) => (
                                 <tr key={idx} className="border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors">
                                     <td className="px-4 py-3 font-medium text-zinc-300">{item.name}</td>
+                                    <td className="px-4 py-3 text-right font-medium text-blue-400/90">{item.value}</td>
                                     <td className="px-4 py-3 text-right font-medium text-emerald-400/90">{item.value}</td>
-                                    <td className="px-4 py-3 text-right font-medium text-emerald-400/90">{item.value}</td>
-                                    <td className="px-4 py-3 text-right font-medium text-red-400/80">0.0%</td>
+                                    <td className="px-4 py-3 text-right font-medium text-zinc-500">—</td>
                                     <td className="px-4 py-3 text-right">
                                         <a href="https://us.posthog.com/replay" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors">
                                             View recordings <Video className="h-3 w-3" />
@@ -350,20 +415,27 @@ const TrafficPanel = () => {
                         <Geographies geography={geoUrl}>
                             {({ geographies }) =>
                                 geographies.map((geo) => {
-                                    const d = countriesData.find(c => c.name === geo.properties.name || c.name === geo.properties.name.toLowerCase());
+                                    const rankIdx = countriesData.findIndex(c =>
+                                        countryMatches(c.name, geo.properties.name)
+                                    );
+                                    const d = rankIdx >= 0 ? countriesData[rankIdx] : null;
+                                    // Each country gets a unique color based on its traffic rank
+                                    const fillColor = d
+                                        ? getCountryColor(rankIdx, countriesData.length)
+                                        : '#27272a';
                                     return (
                                         <Geography
                                             key={geo.rsmKey}
                                             geography={geo}
-                                            fill={d ? "#2563eb" : "#d4d4d8"}
-                                            stroke="#ffffff"
-                                            strokeWidth={0.5}
+                                            fill={fillColor}
+                                            stroke="#3f3f46"
+                                            strokeWidth={0.4}
                                             onMouseEnter={(e) => {
                                                 setTooltip({
                                                     show: true,
                                                     x: e.clientX,
                                                     y: e.clientY,
-                                                    content: { name: geo.properties.name, value: d ? d.value : 0 }
+                                                    content: { name: geo.properties.name, value: d ? d.value : 0, rank: rankIdx + 1 }
                                                 });
                                             }}
                                             onMouseMove={(e) => {
@@ -374,7 +446,7 @@ const TrafficPanel = () => {
                                             }}
                                             style={{
                                                 default: { outline: "none" },
-                                                hover: { fill: "#3b82f6", outline: "none", cursor: "pointer" },
+                                                hover: { fill: '#a78bfa', outline: 'none', cursor: d ? 'pointer' : 'default' },
                                                 pressed: { outline: "none" },
                                             }}
                                         />
@@ -388,13 +460,31 @@ const TrafficPanel = () => {
                 {/* Map Tooltip */}
                 {tooltip.show && tooltip.content && (
                     <div 
-                        className="fixed z-[100] pointer-events-none bg-white text-zinc-900 shadow-xl rounded-md px-3 py-2 flex items-center gap-6 text-sm font-semibold border border-zinc-200"
+                        className="fixed z-[100] pointer-events-none bg-zinc-900 text-zinc-100 shadow-xl rounded-lg px-4 py-2.5 flex items-center gap-4 text-sm font-semibold border border-zinc-700"
                         style={{ left: tooltip.x + 15, top: tooltip.y + 15 }}
                     >
-                        <div className="flex items-center gap-2">
-                            <span>{tooltip.content.name}</span>
-                        </div>
-                        <span className="text-zinc-500 font-normal">{tooltip.content.value}</span>
+                        <span className="text-zinc-100">{tooltip.content.name}</span>
+                        {tooltip.content.value > 0 ? (
+                            <span className="text-violet-400 font-bold">{tooltip.content.value.toLocaleString()} views</span>
+                        ) : (
+                            <span className="text-zinc-500 font-normal text-xs">No data</span>
+                        )}
+                    </div>
+                )}
+
+                {/* Country legend */}
+                {countriesData.length > 0 && (
+                    <div className="w-full mt-4 flex flex-wrap gap-2 justify-center">
+                        {countriesData.slice(0, 8).map((c, idx) => (
+                            <div key={c.name} className="flex items-center gap-1.5 text-xs text-zinc-400">
+                                <span
+                                    className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                    style={{ backgroundColor: getCountryColor(idx, countriesData.length) }}
+                                />
+                                <span>{c.name}</span>
+                                <span className="text-zinc-500">({c.value})</span>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
