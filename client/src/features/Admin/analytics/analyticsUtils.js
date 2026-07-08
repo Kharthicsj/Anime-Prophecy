@@ -62,7 +62,10 @@ export function metricBySubCategory(products, country, category, field) {
 }
 
 export function filterByCountry(products, country) {
-	return products.filter((p) => getCountries(p).includes(country));
+	return products.filter((p) => {
+		const c = getCountries(p);
+		return c.includes(country) || c.includes("Worldwide");
+	});
 }
 
 export function filterByAnime(products, animeTag) {
