@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import apiClient from "../../../services/apiClient";
-import { Loader2, Globe, Laptop, Activity, CalendarDays, RefreshCw, MapPin, FileText, Video, Users, Smartphone, MousePointerClick } from "lucide-react";
+import { Loader2, Laptop, Activity, RefreshCw, Video, Smartphone } from "lucide-react";
 import {
-    AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-    BarChart, Bar, Cell, PieChart, Pie
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
-import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { geoNaturalEarth1, geoPath, geoCentroid } from 'd3-geo';
+import { feature as topoFeature } from 'topojson-client';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -27,26 +27,26 @@ const remapLabel = (name, defaultLabel) => {
 // PostHog country name → world-atlas GeoJSON name mapping
 // (world-atlas uses full official names, PostHog uses common names)
 const COUNTRY_NAME_MAP = {
-    'United States':        'United States of America',
-    'United Kingdom':       'United Kingdom',
-    'South Korea':          'Republic of Korea',
-    'North Korea':          'Dem. Rep. Korea',
-    'Russia':               'Russia',
-    'Iran':                 'Iran',
-    'Syria':                'Syria',
-    'Tanzania':             'Tanzania',
-    'DR Congo':             'Dem. Rep. Congo',
-    'Czech Republic':       'Czechia',
-    'Taiwan':               'Taiwan',
-    'Palestine':            'Palestine',
-    'Ivory Coast':          "Côte d'Ivoire",
+    'United States': 'United States of America',
+    'United Kingdom': 'United Kingdom',
+    'South Korea': 'Republic of Korea',
+    'North Korea': 'Dem. Rep. Korea',
+    'Russia': 'Russia',
+    'Iran': 'Iran',
+    'Syria': 'Syria',
+    'Tanzania': 'Tanzania',
+    'DR Congo': 'Dem. Rep. Congo',
+    'Czech Republic': 'Czechia',
+    'Taiwan': 'Taiwan',
+    'Palestine': 'Palestine',
+    'Ivory Coast': "Côte d'Ivoire",
     'Bosnia and Herzegovina': 'Bosnia and Herz.',
-    'Dominican Republic':   'Dominican Rep.',
+    'Dominican Republic': 'Dominican Rep.',
     'Central African Republic': 'Central African Rep.',
-    'Equatorial Guinea':    'Eq. Guinea',
-    'Western Sahara':       'W. Sahara',
-    'Solomon Islands':      'Solomon Is.',
-    'Timor-Leste':          'Timor-Leste',
+    'Equatorial Guinea': 'Eq. Guinea',
+    'Western Sahara': 'W. Sahara',
+    'Solomon Islands': 'Solomon Is.',
+    'Timor-Leste': 'Timor-Leste',
 };
 
 // Resolve a PostHog country name to the GeoJSON name for matching
@@ -64,14 +64,39 @@ const countryMatches = (posthogName, geoName) => {
     );
 };
 
+// Mainland bounding boxes [minLon, maxLon, minLat, maxLat].
+// Used to detect and discard overseas territory sub-polygons that
+// world-atlas bundles into the same MultiPolygon feature.
+// NOTE: USA is intentionally excluded — Alaska and Hawaii should
+//       be highlighted as part of the US, not treated as overseas.
+const MAINLAND_BOUNDS = {
+    'France': [-5.5, 9.7, 41.0, 51.5],
+    'Norway': [4.0, 31.5, 57.5, 71.5],
+    'Denmark': [8.0, 15.5, 54.5, 58.0],
+    'Netherlands': [3.3, 7.2, 50.7, 53.6],
+    'Portugal': [-9.6, -6.1, 36.8, 42.2],
+    'Spain': [-9.4, 4.4, 35.9, 43.8],
+    'United Kingdom': [-8.7, 1.8, 49.8, 60.9],
+    // Wide bounds include continental US + Alaska + Hawaii but exclude Guam/USVI
+    'United States of America': [-180, -60, 18.0, 75.0],
+    'Australia': [112, 154, -44.0, -10.0],
+    'New Zealand': [166, 178, -47.0, -34.0],
+};
+
+// rotate([-10,0,0]) shifts the antimeridian to 170°W, preventing Russia's Far East
+// from wrapping across to the left side of the map (antimeridian bug).
+// Scale 195 makes landmasses larger for easier hover targets.
+const MAP_PROJECTION = geoNaturalEarth1().rotate([-10, 0, 0]).scale(195).translate([490, 295]);
+const MAP_PATH = geoPath().projection(MAP_PROJECTION);
+
 // Generate choropleth color for a country based on its rank
 const getCountryColor = (rank, total) => {
     if (total === 0) return '#27272a';
     // From deep indigo/violet for rank 1 to a light blue-gray for last rank
     const intensity = 1 - (rank / (total + 1)); // 1.0 → 0.0
     // Interpolate: high traffic = deep #4f46e5 (indigo-600), low = #93c5fd (blue-300)
-    const r = Math.round(79  + (147 - 79)  * (1 - intensity));
-    const g = Math.round(70  + (197 - 70)  * (1 - intensity));
+    const r = Math.round(79 + (147 - 79) * (1 - intensity));
+    const g = Math.round(70 + (197 - 70) * (1 - intensity));
     const b = Math.round(229 + (253 - 229) * (1 - intensity));
     return `rgb(${r},${g},${b})`;
 };
@@ -81,6 +106,39 @@ const TrafficPanel = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: null });
+    // Pre-processed GeoJSON features (MultiPolygons split + overseas filtered)
+    const [geoFeatures, setGeoFeatures] = useState([]);
+
+    // Fetch world-atlas TopoJSON once, split MultiPolygons, filter overseas territories
+    useEffect(() => {
+        fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+            .then(r => r.json())
+            .then(topology => {
+                const countries = topoFeature(topology, topology.objects.countries);
+                const processed = [];
+                countries.features.forEach(f => {
+                    const name = f.properties?.name;
+                    const bounds = MAINLAND_BOUNDS[name];
+                    if (f.geometry?.type === 'MultiPolygon' && bounds) {
+                        f.geometry.coordinates.forEach(coords => {
+                            const sub = {
+                                type: 'Feature',
+                                properties: f.properties,
+                                geometry: { type: 'Polygon', coordinates: coords },
+                            };
+                            const [lon, lat] = geoCentroid(sub);
+                            const [minLon, maxLon, minLat, maxLat] = bounds;
+                            sub._overseas = lon < minLon || lon > maxLon || lat < minLat || lat > maxLat;
+                            processed.push(sub);
+                        });
+                    } else {
+                        processed.push({ ...f, _overseas: false });
+                    }
+                });
+                setGeoFeatures(processed);
+            })
+            .catch(() => { });
+    }, []);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -118,7 +176,7 @@ const TrafficPanel = () => {
                     } else if (label.length >= 6) {
                         dateStr = label.substring(0, 6).replace('-', ' ');
                     }
-                } catch(e) {}
+                } catch (e) { }
 
                 return {
                     date: dateStr,
@@ -133,22 +191,22 @@ const TrafficPanel = () => {
     const totals = useMemo(() => {
         const views = timeSeriesData.reduce((acc, curr) => acc + curr.views, 0);
         const visitors = timeSeriesData.reduce((acc, curr) => acc + curr.visitors, 0);
-        
+
         let sessions = visitors; // Fallback
         if (data?.sessions?.[0]?.data) {
-            sessions = data.sessions[0].data.reduce((a,b) => a+b, 0);
+            sessions = data.sessions[0].data.reduce((a, b) => a + b, 0);
         }
-        
+
         // Mock Session Duration: (approx 1.5 mins per view on avg)
         let durationSec = 0;
         if (sessions > 0) {
             durationSec = Math.floor((views / sessions) * 112); // dynamic calculation based on interaction ratio
         }
-        
+
         const m = Math.floor(durationSec / 60);
         const s = durationSec % 60;
         const sessionDuration = views > 0 ? `${m}m ${s}s` : "0m 0s";
-        
+
         return { views, visitors, sessions, sessionDuration };
     }, [timeSeriesData, data]);
 
@@ -229,10 +287,10 @@ const TrafficPanel = () => {
                         <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                         Refresh Data
                     </button>
-                    <a 
-                        href="https://us.posthog.com/project/489126/web" 
-                        target="_blank" 
-                        rel="noreferrer" 
+                    <a
+                        href="https://us.posthog.com/project/489126/web"
+                        target="_blank"
+                        rel="noreferrer"
                         className="flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-600/10 px-3 py-2 text-xs font-semibold text-violet-400 transition-colors hover:bg-violet-600/20"
                     >
                         Open in PostHog
@@ -273,7 +331,7 @@ const TrafficPanel = () => {
                     <p className="text-3xl font-bold text-zinc-100">0%</p>
                 </div>
             </div>
-            
+
             {/* ── Main Chart ── */}
             <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-5">
                 <div className="mb-6 flex items-center justify-between">
@@ -334,7 +392,7 @@ const TrafficPanel = () => {
 
             {/* ── Secondary Grid (Sources, Devices) ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* Traffic Sources */}
                 <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-5">
                     <div className="flex items-center gap-2 mb-4">
@@ -406,69 +464,59 @@ const TrafficPanel = () => {
             </div>
 
             {/* ── Geography Map ── */}
-            <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-5 flex flex-col items-center relative">
+            <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-5 relative">
                 <div className="flex w-full items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-zinc-200">Geography by Map</h3>
                 </div>
-                <div className="w-full max-w-5xl overflow-hidden flex justify-center">
-                    <ComposableMap projection="geoMercator" projectionConfig={{ scale: 120, center: [0, 30] }} className="w-full h-auto">
-                        <Geographies geography={geoUrl}>
-                            {({ geographies }) =>
-                                geographies.map((geo) => {
-                                    const rankIdx = countriesData.findIndex(c =>
-                                        countryMatches(c.name, geo.properties.name)
-                                    );
-                                    const d = rankIdx >= 0 ? countriesData[rankIdx] : null;
-                                    // Each country gets a unique color based on its traffic rank
-                                    const fillColor = d
-                                        ? getCountryColor(rankIdx, countriesData.length)
-                                        : '#27272a';
-                                    return (
-                                        <Geography
-                                            key={geo.rsmKey}
-                                            geography={geo}
-                                            fill={fillColor}
-                                            stroke="#3f3f46"
-                                            strokeWidth={0.4}
-                                            onMouseEnter={(e) => {
-                                                setTooltip({
-                                                    show: true,
-                                                    x: e.clientX,
-                                                    y: e.clientY,
-                                                    content: { name: geo.properties.name, value: d ? d.value : 0, rank: rankIdx + 1 }
-                                                });
-                                            }}
-                                            onMouseMove={(e) => {
-                                                setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
-                                            }}
-                                            onMouseLeave={() => {
-                                                setTooltip({ show: false, x: 0, y: 0, content: null });
-                                            }}
-                                            style={{
-                                                default: { outline: "none" },
-                                                hover: { fill: '#a78bfa', outline: 'none', cursor: d ? 'pointer' : 'default' },
-                                                pressed: { outline: "none" },
-                                            }}
-                                        />
-                                    );
-                                })
+
+                {/* Full-width SVG world map — viewBox 0 0 960 500 scales to 100% width */}
+                <div className="w-full">
+                    <svg
+                        viewBox="0 0 960 500"
+                        style={{ width: '100%', display: 'block' }}
+                        onMouseLeave={() => setTooltip({ show: false, x: 0, y: 0, content: null })}
+                    >
+                        {geoFeatures.map((feat, i) => {
+                            const pathData = MAP_PATH(feat);
+                            if (!pathData) return null;
+                            const geoName = feat.properties?.name;
+                            // Skip Antarctica — it takes up ~15% of vertical space unnecessarily
+                            if (geoName === 'Antarctica') return null;
+                            // Overseas fragments render as plain dark land — no tooltip
+                            if (feat._overseas) {
+                                return <path key={`os-${i}`} d={pathData} fill="#27272a" stroke="#3f3f46" strokeWidth={0.3} style={{ pointerEvents: 'none' }} />;
                             }
-                        </Geographies>
-                    </ComposableMap>
+                            const rankIdx = countriesData.findIndex(c => countryMatches(c.name, geoName));
+                            const d = rankIdx >= 0 ? countriesData[rankIdx] : null;
+                            const fill = d ? getCountryColor(rankIdx, countriesData.length) : '#27272a';
+                            return (
+                                <path
+                                    key={i}
+                                    d={pathData}
+                                    fill={fill}
+                                    stroke="#3f3f46"
+                                    strokeWidth={0.5}
+                                    style={{ cursor: 'pointer', outline: 'none', transition: 'fill 0.15s' }}
+                                    onMouseEnter={(e) => setTooltip({ show: true, x: e.clientX, y: e.clientY, content: { name: geoName, value: d ? d.value : 0 } })}
+                                    onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))}
+                                    onMouseLeave={() => setTooltip({ show: false, x: 0, y: 0, content: null })}
+                                />
+                            );
+                        })}
+                    </svg>
                 </div>
-                
+
                 {/* Map Tooltip */}
                 {tooltip.show && tooltip.content && (
-                    <div 
+                    <div
                         className="fixed z-[100] pointer-events-none bg-zinc-900 text-zinc-100 shadow-xl rounded-lg px-4 py-2.5 flex items-center gap-4 text-sm font-semibold border border-zinc-700"
                         style={{ left: tooltip.x + 15, top: tooltip.y + 15 }}
                     >
-                        <span className="text-zinc-100">{tooltip.content.name}</span>
-                        {tooltip.content.value > 0 ? (
-                            <span className="text-violet-400 font-bold">{tooltip.content.value.toLocaleString()} views</span>
-                        ) : (
-                            <span className="text-zinc-500 font-normal text-xs">No data</span>
-                        )}
+                        <span>{tooltip.content.name}</span>
+                        {tooltip.content.value > 0
+                            ? <span className="text-violet-400 font-bold">{tooltip.content.value.toLocaleString()} views</span>
+                            : <span className="text-zinc-500 font-normal text-xs">No data</span>
+                        }
                     </div>
                 )}
 
@@ -477,10 +525,7 @@ const TrafficPanel = () => {
                     <div className="w-full mt-4 flex flex-wrap gap-2 justify-center">
                         {countriesData.slice(0, 8).map((c, idx) => (
                             <div key={c.name} className="flex items-center gap-1.5 text-xs text-zinc-400">
-                                <span
-                                    className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                                    style={{ backgroundColor: getCountryColor(idx, countriesData.length) }}
-                                />
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: getCountryColor(idx, countriesData.length) }} />
                                 <span>{c.name}</span>
                                 <span className="text-zinc-500">({c.value})</span>
                             </div>
