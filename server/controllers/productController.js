@@ -404,7 +404,7 @@ export const fetchAliExpressBulk = asyncHandler(async (req, res) => {
                     rating: p.evaluate_rate ? Math.round((parseFloat(p.evaluate_rate) / 20) * 10) / 10 : 0,
                     // Apply dynamic defaults
                     animeTag: 'Other', 
-                    countries: [targetCountry]
+                    countries: Array.isArray(targetCountry) ? targetCountry : [targetCountry]
                 }));
                 results.push(...formatted);
             } else {
