@@ -191,7 +191,12 @@ const PinterestExportModal = ({ onClose, onExportComplete }) => {
             const desc = `"${finalDesc.replace(/"/g, '""')}"`;
             
             // Generate full URL
-            const link = `"${window.location.origin}/product/${p._id}"`;
+            // Ensure production links go to the main domain, not the .onrender.com domain
+            const baseDomain = window.location.hostname === 'localhost' 
+                ? window.location.origin 
+                : 'https://animeprophecy.com';
+                
+            const link = `"${baseDomain}/product/${p._id}"`;
             
             // Pinterest Board (Format: Board Name/Section Name)
             let boardStr = p.animeTag || "Anime Merchandise";

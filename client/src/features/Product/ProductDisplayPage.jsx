@@ -479,22 +479,24 @@ const ProductDisplayPage = () => {
 							)}
 
 							{/* ── Affiliate Disclaimer ── */}
-							<div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm overflow-hidden">
-								<div className="flex gap-3 p-4">
-									<div className="flex-shrink-0 w-1 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 self-stretch" />
-									<div className="flex flex-col gap-1.5 min-w-0">
-										<div className="flex items-center gap-2">
-											<svg className="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											<span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Affiliate Disclosure</span>
+							{product.isActive && (
+								<div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm overflow-hidden">
+									<div className="flex gap-3 p-4">
+										<div className="flex-shrink-0 w-1 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 self-stretch" />
+										<div className="flex flex-col gap-1.5 min-w-0">
+											<div className="flex items-center gap-2">
+												<svg className="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+												</svg>
+												<span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Affiliate Disclosure</span>
+											</div>
+											<p className="text-zinc-400 text-[11.5px] leading-relaxed capitalize">
+												⚠️ We may earn a commission from affiliate links at no extra cost to you. Product availability, prices, discounts, and promotions can change without notice. Broken links, sold-out items, or region restrictions may occur. Please explore other products on the retailer&apos;s website if the featured item is unavailable.
+											</p>
 										</div>
-										<p className="text-zinc-400 text-[11.5px] leading-relaxed capitalize">
-											⚠️ We may earn a commission from affiliate links at no extra cost to you. Product availability, prices, discounts, and promotions can change without notice. Broken links, sold-out items, or region restrictions may occur. Please explore other products on the retailer&apos;s website if the featured item is unavailable.
-										</p>
 									</div>
 								</div>
-							</div>
+							)}
 						</div>
 
 						{/* Right: Product Details */}
@@ -528,34 +530,52 @@ const ProductDisplayPage = () => {
 								</div>
 							</div>
 
-							<div className="mb-10 p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl backdrop-blur-sm">
-								<span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-									{product.currency}{" "}
-									{CURRENCY_SYMBOLS[product.currency] && (
-										<span className="mr-1.5">{CURRENCY_SYMBOLS[product.currency]}</span>
-									)}{product.price.toLocaleString(product.currency === 'INR' ? 'en-IN' : 'en-US')}
-								</span>
-								<p className="text-zinc-500 text-sm mt-3 font-medium">
-									Prices are dynamically updated from <span className="text-zinc-300">{product.store}</span>. Final price may vary at checkout.
-								</p>
-							</div>
-
-							<div className="mt-auto pb-8 border-b border-zinc-800 mb-8">
-								<button
-									onClick={handleBuyNow}
-									className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-12 py-5 bg-white text-black font-black text-lg rounded-xl overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
-								>
-									<div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-									<span className="relative z-10 group-hover:text-white transition-colors duration-300">Purchase on {product.store}</span>
-									<svg className="w-5 h-5 relative z-10 group-hover:text-white transition-colors duration-300 transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-									</svg>
-								</button>
-								<div className="flex items-center gap-2 mt-4 justify-center sm:justify-start text-zinc-500 text-xs font-medium">
-									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-									Affiliate link. You will be securely redirected.
+							{!product.isActive ? (
+								<div className="mb-10 mt-auto p-6 bg-red-900/10 border border-red-900/30 rounded-2xl backdrop-blur-sm">
+									<div className="flex items-center gap-3">
+										<svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+										</svg>
+										<p className="text-red-400 font-bold text-lg">
+											The product you requested is currently not available.
+										</p>
+									</div>
+									<p className="text-zinc-500 text-sm mt-2 font-medium">
+										This product has been marked as private or inactive and cannot be purchased at this time.
+									</p>
 								</div>
-							</div>
+							) : (
+								<>
+									<div className="mb-10 p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl backdrop-blur-sm">
+										<span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+											{product.currency}{" "}
+											{CURRENCY_SYMBOLS[product.currency] && (
+												<span className="mr-1.5">{CURRENCY_SYMBOLS[product.currency]}</span>
+											)}{product.price.toLocaleString(product.currency === 'INR' ? 'en-IN' : 'en-US')}
+										</span>
+										<p className="text-zinc-500 text-sm mt-3 font-medium">
+											Prices are dynamically updated from <span className="text-zinc-300">{product.store}</span>. Final price may vary at checkout.
+										</p>
+									</div>
+
+									<div className="mt-auto pb-8 border-b border-zinc-800 mb-8">
+										<button
+											onClick={handleBuyNow}
+											className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-12 py-5 bg-white text-black font-black text-lg rounded-xl overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+										>
+											<div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+											<span className="relative z-10 group-hover:text-white transition-colors duration-300">Purchase on {product.store}</span>
+											<svg className="w-5 h-5 relative z-10 group-hover:text-white transition-colors duration-300 transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+											</svg>
+										</button>
+										<div className="flex items-center gap-2 mt-4 justify-center sm:justify-start text-zinc-500 text-xs font-medium">
+											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+											Affiliate link. You will be securely redirected.
+										</div>
+									</div>
+								</>
+							)}
 
 							<div className="prose prose-invert max-w-none">
 								<h3 className="text-lg font-bold text-white mb-3 uppercase tracking-wider text-sm">Product Description</h3>
