@@ -1,5 +1,6 @@
 import React from "react";
 import { FiCopy, FiX, FiRefreshCw, FiSearch, FiLink, FiLock } from "react-icons/fi";
+import { FaPinterest } from "react-icons/fa";
 import Button from "../../components/ui/Button";
 import { SearchableDropdown } from "../../components/common/FilterPanel";
 import { BoxIcon } from "../../components/common/Icons";
@@ -36,6 +37,7 @@ const ProductList = ({
 	setSearchQuery,
 	setShowAffiliateModal,
 	setShowPrivateModal,
+	setShowPinterestModal,
 	setShowScheduledModal,
 	setSortBy,
 	sortBy,
@@ -69,6 +71,13 @@ const ProductList = ({
 										className="border border-rose-500/30 hover:border-rose-500 text-rose-400 hover:text-rose-300 flex items-center gap-2"
 									>
 										<FiLock /> Manage Products
+									</Button>
+									<Button
+										onClick={() => setShowPinterestModal(true)}
+										variant="secondary"
+										className="border border-red-500/30 hover:border-red-500 text-red-400 hover:text-red-300 flex items-center gap-2"
+									>
+										<FaPinterest className="text-lg" /> Pinterest Export
 									</Button>
 									<Button
 										onClick={() => setShowAffiliateModal(true)}
@@ -286,6 +295,11 @@ const ProductList = ({
 													{(p.isActive && p.scheduledUploadTime && new Date(p.scheduledUploadTime) > new Date()) && (
 														<span className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-400 border border-blue-800/50" title={`Scheduled for ${new Date(p.scheduledUploadTime).toLocaleString()}`}>
 															Scheduled
+														</span>
+													)}
+													{p.pinterestExported && (
+														<span className="text-xs px-2 py-1 rounded bg-red-900/30 text-red-400 border border-red-800/50" title="Exported to Pinterest">
+														<span className="flex items-center gap-1"><FaPinterest /> Exported</span>
 														</span>
 													)}
 													<span

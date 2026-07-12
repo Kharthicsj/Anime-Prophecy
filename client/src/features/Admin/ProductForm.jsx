@@ -1,5 +1,6 @@
 import React from "react";
 import { FiCopy, FiX, FiRefreshCw, FiSearch } from "react-icons/fi";
+import { FaPinterest } from "react-icons/fa";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import Input from "../../components/ui/Input";
@@ -414,6 +415,45 @@ const ProductForm = ({
 										</div>
 									</div>
 								</div>
+
+								{editingId && (
+									<div className="space-y-4 pt-4 border-t border-zinc-800">
+										<h3 className="text-lg font-bold text-white flex items-center gap-2">
+											<FaPinterest className="text-red-500" /> Social Media Tracking
+										</h3>
+										<div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700">
+											<div className="flex items-center gap-3 mb-3">
+												<span className={`px-3 py-1 rounded-full text-xs font-bold border ${formData.pinterestExported ? 'bg-red-900/40 text-red-400 border-red-800/50' : 'bg-zinc-700 text-zinc-400 border-zinc-600'}`}>
+													{formData.pinterestExported ? "Exported to Pinterest" : "Not Exported to Pinterest"}
+												</span>
+												{formData.pinterestExports?.length > 0 && (
+													<span className="text-xs text-zinc-400 font-semibold">
+														Exported {formData.pinterestExports.length} time(s)
+													</span>
+												)}
+											</div>
+											{formData.pinterestExports?.length > 0 && (
+												<div className="mt-4">
+													<h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">Export History</h4>
+													<div className="max-h-32 overflow-y-auto space-y-2 pr-2">
+														{formData.pinterestExports.slice().reverse().map((exp, i) => (
+															<div key={i} className="flex justify-between items-center bg-zinc-900 px-3 py-2 rounded border border-zinc-800 text-xs">
+																<span className="text-zinc-300">
+																	Exported on: <span className="font-bold text-white">{new Date(exp.exportedAt).toLocaleDateString()} {new Date(exp.exportedAt).toLocaleTimeString()}</span>
+																</span>
+																{exp.scheduledFor && (
+																	<span className="text-blue-400">
+																		Sched: {new Date(exp.scheduledFor).toLocaleDateString()}
+																	</span>
+																)}
+															</div>
+														))}
+													</div>
+												</div>
+											)}
+										</div>
+									</div>
+								)}
 
 								<div className="space-y-4 pt-4 border-t border-zinc-800">
 									<h3 className="text-lg font-bold text-white">

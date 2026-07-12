@@ -149,6 +149,15 @@ const productSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        pinterestExported: {
+            type: Boolean,
+            default: false,
+        },
+        pinterestExports: [{
+            exportId: { type: mongoose.Schema.Types.ObjectId, ref: 'PinterestExport' },
+            exportedAt: { type: Date, default: Date.now },
+            scheduledFor: { type: Date, default: null }
+        }],
         scheduledUploadTime: {
             type: Date,
             default: null,

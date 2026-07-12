@@ -18,6 +18,10 @@ import {
     fetchAliExpressBulk,
     bulkCreateProducts,
     bulkDeleteProducts,
+    bulkPinterestExport,
+    getPinterestExports,
+    deletePinterestExport,
+    downloadPinterestExport
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -114,6 +118,34 @@ router.patch('/bulk-visibility', verifyToken, isAdmin, bulkUpdateVisibility);
  * @access Private/Admin
  */
 router.delete('/bulk-delete', verifyToken, isAdmin, bulkDeleteProducts);
+
+/**
+ * @route POST /api/products/admin/pinterest-export
+ * @desc Record a bulk pinterest export in the DB
+ * @access Private/Admin
+ */
+router.post('/admin/pinterest-export', verifyToken, isAdmin, bulkPinterestExport);
+
+/**
+ * @route GET /api/products/admin/pinterest-export
+ * @desc Get all bulk pinterest exports
+ * @access Private/Admin
+ */
+router.get('/admin/pinterest-export', verifyToken, isAdmin, getPinterestExports);
+
+/**
+ * @route GET /api/products/admin/pinterest-export/:id/download
+ * @desc Download a pinterest export record CSV
+ * @access Private/Admin
+ */
+router.get('/admin/pinterest-export/:id/download', verifyToken, isAdmin, downloadPinterestExport);
+
+/**
+ * @route DELETE /api/products/admin/pinterest-export/:id
+ * @desc Delete a pinterest export record
+ * @access Private/Admin
+ */
+router.delete('/admin/pinterest-export/:id', verifyToken, isAdmin, deletePinterestExport);
 
 /**
  * @route PUT /api/products/:id

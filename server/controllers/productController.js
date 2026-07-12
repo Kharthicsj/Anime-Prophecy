@@ -4,6 +4,7 @@ import { asyncHandler, AppError } from '../utils/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 import { getAliExpressProductDetails } from '../utils/aliexpressApi.js';
+import PinterestExport from '../models/PinterestExport.js';
 
 /**
  * Get all products with filters
@@ -235,9 +236,14 @@ export const getAllProductsAdmin = asyncHandler(async (req, res) => {
         category,
         subCategory,
         status,
+        pinterestExported,
     } = req.query;
 
     const filter = {};
+
+    if (pinterestExported !== undefined && pinterestExported !== 'All' && pinterestExported !== '') {
+        filter.pinterestExported = pinterestExported === 'true';
+    }
 
     if (status) {
         if (status === 'active') {
@@ -717,6 +723,127 @@ export const bulkDeleteProducts = asyncHandler(async (req, res) => {
             deletedCount: result.deletedCount,
         },
     });
+});
+
+/**
+ * Bulk export products to Pinterest
+ * @route POST /api/products/admin/pinterest-export
+ * @access Private/Admin
+ */
+export const bulkPinterestExport = asyncHandler(async (req, res) => {
+    const { ids, scheduledDate } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+        throw new AppError('ids must be a non-empty array', 400);
+    }
+    
+    if (ids.length > 5000) {
+        throw new AppError('Maximum 5000 IDs allowed per export', 400);
+    }
+
+    const objectIds = ids
+        .filter(id => mongoose.Types.ObjectId.isValid(id))
+        .map(id => new mongoose.Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+        throw new AppError('No valid product IDs provided', 400);
+    }
+
+    // Create a new export record
+    const exportRecord = new PinterestExport({
+        scheduledDate: scheduledDate || null,
+        productCount: objectIds.length,
+        productIds: objectIds,
+        createdBy: req.user.id
+    });
+    await exportRecord.save();
+
+    // Update products
+    await Product.updateMany(
+        { _id: { $in: objectIds } },
+        {
+            $set: { pinterestExported: true },
+            $push: {
+                pinterestExports: {
+                    exportId: exportRecord._id,
+                    exportedAt: new Date(),
+                    scheduledFor: scheduledDate || null
+                }
+            }
+        }
+    );
+
+    res.json({
+        success: true,
+        message: `${objectIds.length} products marked as Pinterest Exported.`,
+        data: {
+            exportId: exportRecord._id,
+            productCount: objectIds.length
+        }
+    });
+});
+
+/**
+ * Get all Pinterest exports
+ * @route GET /api/products/admin/pinterest-export
+ * @access Private/Admin
+ */
+export const getPinterestExports = asyncHandler(async (req, res) => {
+    const exports = await PinterestExport.find()
+        .populate('createdBy', 'name email')
+        .sort('-createdAt');
+    
+    res.json({ success: true, data: exports });
+});
+
+/**
+ * Download a previous Pinterest export record
+ * @route GET /api/products/admin/pinterest-export/:id/download
+ * @access Private/Admin
+ */
+export const downloadPinterestExport = asyncHandler(async (req, res) => {
+    const exportRecord = await PinterestExport.findById(req.params.id)
+        .populate({
+            path: 'productIds',
+            select: 'title description animeTag category subCategory store images _id'
+        });
+
+    if (!exportRecord) {
+        throw new AppError('Export record not found', 404);
+    }
+
+    res.json({
+        success: true,
+        data: exportRecord
+    });
+});
+
+/**
+ * Delete a Pinterest export record and optionally reset product status
+ * @route DELETE /api/products/admin/pinterest-export/:id
+ * @access Private/Admin
+ */
+export const deletePinterestExport = asyncHandler(async (req, res) => {
+    const exportRecord = await PinterestExport.findById(req.params.id);
+    if (!exportRecord) {
+        throw new AppError('Export record not found', 404);
+    }
+
+    const { resetProducts } = req.query;
+
+    if (resetProducts === 'true') {
+        await Product.updateMany(
+            { _id: { $in: exportRecord.productIds } },
+            { 
+                $set: { pinterestExported: false },
+                $pull: { pinterestExports: { exportId: exportRecord._id } }
+            }
+        );
+    }
+
+    await PinterestExport.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Export record deleted successfully' });
 });
 
 /**

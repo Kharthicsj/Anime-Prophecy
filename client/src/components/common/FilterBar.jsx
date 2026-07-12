@@ -21,6 +21,7 @@ const FilterBar = ({
 	onFilterChange,
 	selectedFilters = {},
 	className = "",
+	showPinterestFilter = false,
 }) => {
 	const [localFilters, setLocalFilters] = useState(selectedFilters);
 
@@ -82,6 +83,12 @@ const FilterBar = ({
 		{ label: "Scheduled", value: "Scheduled" }
 	];
 
+	const pinterestExportOptions = [
+		{ label: "All Statuses", value: "All" },
+		{ label: "Exported", value: "Exported" },
+		{ label: "Not Exported", value: "NotExported" }
+	];
+
 	const handleLocalFilterChange = (filterType, value) => {
 		const updated = { ...localFilters };
 		if (Array.isArray(value)) {
@@ -128,7 +135,7 @@ const FilterBar = ({
 				/>
 			</div>
 
-			<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+			<div className={`grid gap-3 grid-cols-2 sm:grid-cols-3 ${showPinterestFilter ? 'lg:grid-cols-7' : 'lg:grid-cols-6'}`}>
 				<SearchableDropdown
 					label="Sort By"
 					value={localFilters.sort || "-createdAt"}
@@ -169,6 +176,14 @@ const FilterBar = ({
 					onChange={(v) => handleLocalFilterChange("status", v)}
 					options={statusOptions}
 				/>
+				{showPinterestFilter && (
+					<SearchableDropdown
+						label="Export Status"
+						value={localFilters.pinterestExported || "All"}
+						onChange={(v) => handleLocalFilterChange("pinterestExported", v)}
+						options={pinterestExportOptions}
+					/>
+				)}
 			</div>
 
 			<div className="flex justify-end mt-4">
@@ -192,7 +207,8 @@ const FilterBar = ({
 							value !== "All Stores" &&
 							value !== "All Categories" &&
 							value !== "All Countries" &&
-							value !== "All Statuses" && (
+							value !== "All Statuses" && 
+							!(key === "pinterestExported" && value === "All") && (
 								<div
 									key={key}
 									className="bg-purple-900/30 border border-purple-700 rounded-full px-3 py-1 text-xs text-purple-200 flex items-center gap-2"

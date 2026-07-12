@@ -28,6 +28,7 @@ import CopyProductModal from "../../components/admin/CopyProductModal";
 import AffiliateSelectionModal from "../../components/admin/AffiliateSelectionModal";
 import AffiliateBulkModal from "../../components/admin/AffiliateBulkModal";
 import PrivateProductsModal from "../../components/admin/PrivateProductsModal";
+import PinterestExportModal from "../../components/admin/PinterestExportModal";
 
 import ProductForm from "./ProductForm";
 import ProductList from "./ProductList";
@@ -62,6 +63,7 @@ const ProductManagement = () => {
 	const [showScheduledModal, setShowScheduledModal] = useState(false);
 	const [showPrivateModal, setShowPrivateModal] = useState(false);
 	const [showAffiliateModal, setShowAffiliateModal] = useState(false);
+	const [showPinterestModal, setShowPinterestModal] = useState(false);
 	const [selectedAffiliatePlatform, setSelectedAffiliatePlatform] = useState(null);
 
 	// Pagination & Infinite Scroll states
@@ -87,6 +89,8 @@ const ProductManagement = () => {
 		sizes: [],
 		isActive: true,
 		scheduledUploadTime: "",
+		pinterestExported: false,
+		pinterestExports: [],
 	};
 	const [formData, setFormData] = useState(initialForm);
 	const [imageItems, setImageItems] = useState([]);
@@ -274,6 +278,8 @@ const ProductManagement = () => {
 			sizes: prod.sizes || [],
 			isActive: prod.isActive !== undefined ? prod.isActive : true,
 			scheduledUploadTime: prod.scheduledUploadTime ? new Date(prod.scheduledUploadTime).toISOString().slice(0, 16) : "",
+			pinterestExported: prod.pinterestExported || false,
+			pinterestExports: prod.pinterestExports || [],
 		});
 		// Use merged (static + dynamic) lists so DB-stored custom values are recognised
 		const allAnime = mergeUnique(animeOptions, dynamicOptions.animeTags);
@@ -1005,6 +1011,7 @@ const ProductManagement = () => {
 						setSearchQuery={setSearchQuery}
 						setShowAffiliateModal={setShowAffiliateModal}
 						setShowPrivateModal={setShowPrivateModal}
+						setShowPinterestModal={setShowPinterestModal}
 						setShowScheduledModal={setShowScheduledModal}
 						setSortBy={setSortBy}
 						sortBy={sortBy}
@@ -1106,12 +1113,14 @@ const ProductManagement = () => {
 			{showPrivateModal && (
 				<PrivateProductsModal
 					onClose={() => setShowPrivateModal(false)}
-					onPrivacyChanged={() => {
-						setProducts([]);
-						setCurrentPage(1);
-						setHasMore(true);
-						fetchProducts(1, true);
-					}}
+					onPrivacyChanged={() => fetchProducts(1, true)}
+				/>
+			)}
+			
+			{showPinterestModal && (
+				<PinterestExportModal
+					onClose={() => setShowPinterestModal(false)}
+					onExportComplete={() => fetchProducts(currentPage, true)}
 				/>
 			)}
 			{/* Scheduled Products Modal */}
