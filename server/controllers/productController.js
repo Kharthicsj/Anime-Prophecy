@@ -490,12 +490,58 @@ export const bulkCreateProducts = asyncHandler(async (req, res) => {
         };
     });
 
-    const result = await Product.insertMany(productsToInsert);
+    // Check for duplicates
+    const incomingAffiliateIds = productsToInsert
+        .map(p => p.affiliateProductId?.toString())
+        .filter(id => id != null);
+
+    let existingIds = new Set();
+    if (incomingAffiliateIds.length > 0) {
+        const existingProducts = await Product.find({
+            affiliateProductId: { $in: incomingAffiliateIds }
+        }).select('affiliateProductId');
+        
+        existingProducts.forEach(p => existingIds.add(p.affiliateProductId.toString()));
+    }
+
+    const uniqueNewProducts = [];
+    const skippedProducts = [];
+    const insertedLogs = [];
+    const seenInBatch = new Set();
+
+    for (const p of productsToInsert) {
+        const id = p.affiliateProductId?.toString() || 'Unknown';
+        
+        if (id !== 'Unknown') {
+            if (existingIds.has(id)) {
+                skippedProducts.push({ id, title: p.title, status: 'Skipped (Duplicate detected in DB)' });
+            } else if (seenInBatch.has(id)) {
+                skippedProducts.push({ id, title: p.title, status: 'Skipped (Duplicate detected in batch)' });
+            } else {
+                seenInBatch.add(id);
+                uniqueNewProducts.push(p);
+                insertedLogs.push({ id, title: p.title, status: 'Added' });
+            }
+        } else {
+            uniqueNewProducts.push(p);
+            insertedLogs.push({ id: 'N/A', title: p.title, status: 'Added' });
+        }
+    }
+
+    let result = [];
+    if (uniqueNewProducts.length > 0) {
+        result = await Product.insertMany(uniqueNewProducts);
+    }
 
     res.status(201).json({
         success: true,
-        message: `${result.length} products created successfully.`,
-        data: { count: result.length },
+        message: `${result.length} products created successfully. ${skippedProducts.length} duplicates skipped.`,
+        data: { 
+            count: result.length,
+            skippedCount: skippedProducts.length,
+            insertedProducts: insertedLogs,
+            skippedProducts: skippedProducts
+        },
     });
 });
 
