@@ -805,7 +805,7 @@ export const downloadPinterestExport = asyncHandler(async (req, res) => {
     const exportRecord = await PinterestExport.findById(req.params.id)
         .populate({
             path: 'productIds',
-            select: 'title description animeTag category subCategory store images _id'
+            select: 'title description animeTag category subCategory store images videos _id'
         });
 
     if (!exportRecord) {

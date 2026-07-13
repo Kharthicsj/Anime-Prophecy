@@ -165,13 +165,24 @@ const PinterestExportModal = ({ onClose, onExportComplete }) => {
 
         const rows = dataList.map(p => {
             const title = `"${(p.title || "").replace(/"/g, '""')}"`;
-            
-            // Media URL (All product images)
-            const allImages = (p.images || []).map(img => img.url).join(",");
-            const mediaUrl = `"${allImages}"`;
-            
-            // Thumbnail (First image)
-            const thumbnail = `"${p.images?.[0]?.url || ""}"`;
+            // Media URL & Thumbnail
+            // Pinterest bulk upload only accepts ONE URL per cell for standard pins.
+            // If Thumbnail is provided, Pinterest thinks it's a Video Pin and throws an error for images!
+            let mediaUrlStr = "";
+            let thumbnailStr = "";
+
+            if (p.videos && p.videos.length > 0) {
+                // Video Pin
+                mediaUrlStr = p.videos[0].url;
+                thumbnailStr = p.images?.[0]?.url || "";
+            } else {
+                // Standard Image Pin (Strictly only the first image)
+                mediaUrlStr = p.images?.[0]?.url || "";
+                thumbnailStr = ""; // MUST be empty to avoid "Video Pin" error for standard images
+            }
+
+            const mediaUrl = `"${mediaUrlStr}"`;
+            const thumbnail = `"${thumbnailStr}"`;
             
             // Generate tags as hashtags
             const rawTags = [p.animeTag, p.category, p.subCategory, p.store];
