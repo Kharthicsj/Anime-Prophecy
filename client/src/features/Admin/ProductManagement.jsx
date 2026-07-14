@@ -56,6 +56,7 @@ const ProductManagement = () => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortBy, setSortBy] = useState("-createdAt");
 	const [filterCategory, setFilterCategory] = useState("All");
+	const [filterSubCategory, setFilterSubCategory] = useState("All");
 	const [filterAnime, setFilterAnime] = useState("All");
 	const [filterStore, setFilterStore] = useState("All");
 	const [filterCountry, setFilterCountry] = useState("All");
@@ -176,6 +177,7 @@ const ProductManagement = () => {
 				...(searchQuery && { search: searchQuery }),
 				...(filterAnime !== "All" && { animeTag: filterAnime }),
 				...(filterCategory !== "All" && { category: filterCategory }),
+				...(filterSubCategory !== "All" && { subCategory: filterSubCategory }),
 				...(filterStore !== "All" && { store: filterStore }),
 				...(filterCountry !== "All" && { country: filterCountry }),
 				...(filterStatus !== "All" && { status: filterStatus === "Inactive (Private)" ? "inactive" : filterStatus.toLowerCase() }),
@@ -195,7 +197,7 @@ const ProductManagement = () => {
 			if (reset) setLoadingList(false);
 			isFetchingRef.current = false;
 		}
-	}, [searchQuery, sortBy, filterCategory, filterAnime, filterStore, filterCountry, filterStatus]);
+	}, [searchQuery, sortBy, filterCategory, filterSubCategory, filterAnime, filterStore, filterCountry, filterStatus]);
 
 	// mergeUnique is defined at module level
 
@@ -218,6 +220,40 @@ const ProductManagement = () => {
 		{ value: "All", label: "All Countries" },
 		...mergeUnique(countryOptions, dynamicOptions.countries).filter(v => v !== "Other").map(o => ({ value: o, label: o }))
 	];
+
+	// Subcategory dynamic fetch logic
+	const [categorySubCategories, setCategorySubCategories] = useState([]);
+	
+	useEffect(() => {
+		if (filterCategory === "All") {
+			setCategorySubCategories([]);
+			return;
+		}
+		const fetchSubCategories = async () => {
+			try {
+				const res = await apiClient.get(`/products/meta/filters?category=${encodeURIComponent(filterCategory)}`);
+				setCategorySubCategories(res.data?.data?.subCategories || []);
+			} catch {
+				setCategorySubCategories([]);
+			}
+		};
+		fetchSubCategories();
+	}, [filterCategory]);
+
+	const finalSubCategoryOptions = useMemo(() => {
+		if (filterCategory === "All") return [{ value: "All", label: "All Sub Categories" }];
+		let staticSubCatList = [];
+		if (SUB_CATEGORY_MAP[filterCategory]) {
+			staticSubCatList = SUB_CATEGORY_MAP[filterCategory];
+		}
+		const dynamicSubCatExtras = categorySubCategories.filter(
+			v => !staticSubCatList.includes(v) && v !== ""
+		);
+		return [
+			{ value: "All", label: "All Sub Categories" },
+			...mergeUnique(staticSubCatList, dynamicSubCatExtras).map(v => ({ value: v, label: v }))
+		];
+	}, [filterCategory, categorySubCategories]);
 
 	useEffect(() => {
 		if (user && viewMode === "list") {
@@ -988,11 +1024,13 @@ const ProductManagement = () => {
 						SearchableDropdown={SearchableDropdown}
 						filterAnime={filterAnime}
 						filterCategory={filterCategory}
+						filterSubCategory={filterSubCategory}
 						filterCountry={filterCountry}
 						filterStatus={filterStatus}
 						filterStore={filterStore}
 						finalAnimeOptions={finalAnimeOptions}
 						finalCategoryOptions={finalCategoryOptions}
+						finalSubCategoryOptions={finalSubCategoryOptions}
 						finalCountryOptions={finalCountryOptions}
 						finalStoreOptions={finalStoreOptions}
 						handleDelete={handleDelete}
@@ -1005,6 +1043,7 @@ const ProductManagement = () => {
 						sentinelRef={sentinelRef}
 						setFilterAnime={setFilterAnime}
 						setFilterCategory={setFilterCategory}
+						setFilterSubCategory={setFilterSubCategory}
 						setFilterCountry={setFilterCountry}
 						setFilterStatus={setFilterStatus}
 						setFilterStore={setFilterStore}

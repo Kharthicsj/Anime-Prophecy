@@ -191,12 +191,10 @@ const PinterestExportModal = ({ onClose, onExportComplete }) => {
                 
             const link = `"${baseDomain}/product/${p._id}"`;
             
-            // Pinterest Board (Format: Board Name/Section Name)
-            let boardStr = p.animeTag || "Anime Merchandise";
-            if (p.animeTag && p.category) {
-                // Creates a board for the Anime, and a sub-section for the Category
-                boardStr = `${p.animeTag}/${p.category}`;
-            }
+            // Pinterest Board (Format: Country/Anime in ALL CAPS)
+            const countryStr = p.countries?.[0] || "WORLDWIDE";
+            const animeStr = p.animeTag || "ANIME";
+            const boardStr = `${countryStr}/${animeStr}`.toUpperCase();
             const pinterestBoard = `"${boardStr.replace(/"/g, '""')}"`;
             
             // Keywords (Comma separated keywords)

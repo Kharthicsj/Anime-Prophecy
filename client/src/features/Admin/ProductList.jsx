@@ -13,11 +13,13 @@ const ProductList = ({
 	SearchableDropdown,
 	filterAnime,
 	filterCategory,
+	filterSubCategory,
 	filterCountry,
 	filterStatus,
 	filterStore,
 	finalAnimeOptions,
 	finalCategoryOptions,
+	finalSubCategoryOptions,
 	finalCountryOptions,
 	finalStoreOptions,
 	handleDelete,
@@ -31,6 +33,7 @@ const ProductList = ({
 	sentinelRef,
 	setFilterAnime,
 	setFilterCategory,
+	setFilterSubCategory,
 	setFilterCountry,
 	setFilterStatus,
 	setFilterStore,
@@ -133,9 +136,21 @@ const ProductList = ({
 								<SearchableDropdown
 									label="Category"
 									value={filterCategory}
-									onChange={(v) => setFilterCategory(v)}
+									onChange={(v) => {
+										setFilterCategory(v);
+										setFilterSubCategory("All"); // Reset subcategory when category changes
+									}}
 									options={finalCategoryOptions}
 								/>
+
+								{filterCategory !== "All" && (
+									<SearchableDropdown
+										label={<span className="text-purple-300">Sub Category</span>}
+										value={filterSubCategory}
+										onChange={(v) => setFilterSubCategory(v)}
+										options={finalSubCategoryOptions}
+									/>
+								)}
 
 								<SearchableDropdown
 									label="Anime"
@@ -172,16 +187,17 @@ const ProductList = ({
 							</div>
 
 							{/* Active filter chips */}
-							{(searchQuery || filterCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All") && (
+							{(searchQuery || filterCategory !== "All" || filterSubCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All") && (
 								<div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-zinc-800">
 									<span className="text-xs text-zinc-500">Active filters:</span>
 									{searchQuery && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">Search: "{searchQuery}"</span>}
 									{filterCategory !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterCategory}</span>}
+									{filterSubCategory !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterSubCategory}</span>}
 									{filterAnime !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterAnime}</span>}
 									{filterStore !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterStore}</span>}
 									{filterCountry !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterCountry}</span>}
 									{filterStatus !== "All" && <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full border border-purple-800/50">{filterStatus}</span>}
-									<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-xs text-zinc-500 hover:text-red-400 transition-colors underline">Clear all</button>
+									<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterSubCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-xs text-zinc-500 hover:text-red-400 transition-colors underline">Clear all</button>
 								</div>
 							)}
 						</div>
@@ -193,12 +209,12 @@ const ProductList = ({
 							</p>
 						</div>
 					) : (() => {
-						if (products.length === 0 && !loadingList && (searchQuery !== "" || filterCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All")) return (
+						if (products.length === 0 && !loadingList && (searchQuery !== "" || filterCategory !== "All" || filterSubCategory !== "All" || filterAnime !== "All" || filterStore !== "All" || filterCountry !== "All" || filterStatus !== "All")) return (
 							<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
 								<BoxIcon className="h-16 w-16 text-zinc-600 mx-auto mb-4" />
 								<h3 className="text-xl font-bold text-white mb-2">No Matches Found</h3>
 								<p className="text-zinc-400 mb-4">Try adjusting your search or filters.</p>
-								<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-purple-400 hover:underline text-sm">Clear filters</button>
+								<button onClick={() => { setSearchQuery(""); setFilterCategory("All"); setFilterSubCategory("All"); setFilterAnime("All"); setFilterStore("All"); setFilterCountry("All"); setFilterStatus("All"); }} className="text-purple-400 hover:underline text-sm">Clear filters</button>
 							</div>
 						);
 

@@ -12,6 +12,16 @@ import { countries } from "../../utils/countries";
 // Merge two arrays, deduplicating
 const mergeUnique = (a, b) => [...new Set([...a, ...b])];
 
+const SUB_CATEGORY_MAP = {
+	"Clothing": ["T-Shirts", "Hoodies", "Pants", "Jackets", "Other"],
+	"Electronics": ["Mouse Pads", "Phone Cases", "Keyboards", "Headphones", "Other"],
+	"Posters": ["Canvas Print", "Paper Poster", "Metal Print", "Framed Poster", "Other"],
+	"Gadgets": ["Keychains", "Mugs", "Lamps", "Other"],
+	"Figures": ["Action Figure", "Statue", "Funko Pop", "Nendoroid", "Other"],
+	"Accessories": ["Necklace", "Bracelet", "Ring", "Earrings", "Bag", "Other"],
+	"Cosplay": ["Costume", "Props", "Wigs", "Other"],
+};
+
 /**
  * Filter Bar Component
  * Multi-criteria filtering for anime, stores, categories, etc.
@@ -52,6 +62,52 @@ const FilterBar = ({
 		};
 		fetchMeta();
 	}, []);
+
+	// ── Dynamic sub categories logic ─────────────────────────────────────────
+	const [categorySubCategories, setCategorySubCategories] = useState([]);
+	
+	const selectedCategoryRaw = localFilters.category || "All Categories";
+	const selectedCategories = Array.isArray(selectedCategoryRaw) 
+		? selectedCategoryRaw 
+		: (selectedCategoryRaw && selectedCategoryRaw !== "All Categories" ? selectedCategoryRaw.split(',') : []);
+	
+	const firstSelectedCategory = selectedCategories.length > 0 ? selectedCategories[0] : "All Categories";
+
+	useEffect(() => {
+		if (firstSelectedCategory === "All Categories") {
+			setCategorySubCategories([]);
+			return;
+		}
+		const fetchSubCategories = async () => {
+			try {
+				const res = await apiClient.get(
+					`/products/meta/filters?category=${encodeURIComponent(firstSelectedCategory)}`,
+				);
+				setCategorySubCategories(res.data?.data?.subCategories || []);
+			} catch {
+				setCategorySubCategories([]);
+			}
+		};
+		fetchSubCategories();
+	}, [firstSelectedCategory]);
+
+	let staticSubCatList = [];
+	if (selectedCategories.length > 0) {
+		selectedCategories.forEach(cat => {
+			if (SUB_CATEGORY_MAP[cat]) {
+				staticSubCatList = [...staticSubCatList, ...SUB_CATEGORY_MAP[cat]];
+			}
+		});
+	}
+	
+	const dynamicSubCatExtras = categorySubCategories.filter(
+		v => !staticSubCatList.includes(v) && v !== ""
+	);
+	const showSubCategory = selectedCategories.length > 0;
+	const subCategoryOptions = [
+		{ value: "All", label: `All Sub Categories` },
+		...mergeUnique(staticSubCatList, dynamicSubCatExtras).map(v => ({ value: v, label: v })),
+	];
 
 	// Static base lists (shared constants, same as FilterPanel)
 	const staticAnime    = ANIME_FILTER_OPTIONS.filter(v => v !== "All Anime");
@@ -99,6 +155,11 @@ const FilterBar = ({
 		} else {
 			updated[filterType] = value;
 		}
+		
+		if (filterType === "category") {
+			delete updated.subCategory;
+		}
+		
 		setLocalFilters(updated);
 	};
 
@@ -149,6 +210,15 @@ const FilterBar = ({
 					options={categoryOptions}
 					isMulti
 				/>
+				{showSubCategory && (
+					<SearchableDropdown
+						label="Sub Category"
+						value={localFilters.subCategory || "All"}
+						onChange={(v) => handleLocalFilterChange("subCategory", v)}
+						options={subCategoryOptions}
+						isMulti
+					/>
+				)}
 				<SearchableDropdown
 					label="Anime"
 					value={localFilters.animeTag || "All Anime"}
@@ -208,6 +278,7 @@ const FilterBar = ({
 							value !== "All Categories" &&
 							value !== "All Countries" &&
 							value !== "All Statuses" && 
+							value !== "All" && // for subcategory
 							!(key === "pinterestExported" && value === "All") && (
 								<div
 									key={key}
