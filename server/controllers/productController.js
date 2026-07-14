@@ -5,6 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 import { getAliExpressProductDetails } from '../utils/aliexpressApi.js';
 import PinterestExport from '../models/PinterestExport.js';
+import ImageExport from '../models/ImageExport.js';
 
 /**
  * Get all products with filters
@@ -1057,4 +1058,66 @@ export const updateGlobalSettings = asyncHandler(async (req, res) => {
         message: 'Settings updated successfully',
         data: { settings },
     });
+});
+
+export const bulkImageExport = asyncHandler(async (req, res) => {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        throw new AppError('No product IDs provided', 400);
+    }
+
+    const objectIds = ids.map(id => new mongoose.Types.ObjectId(id));
+
+    const exportRecord = new ImageExport({
+        productCount: objectIds.length,
+        productIds: objectIds,
+        createdBy: req.user.id
+    });
+    await exportRecord.save();
+
+    res.json({
+        success: true,
+        message: `${objectIds.length} products exported as images.`,
+        data: {
+            exportId: exportRecord._id,
+            productCount: objectIds.length
+        }
+    });
+});
+
+export const getImageExports = asyncHandler(async (req, res) => {
+    const exports = await ImageExport.find()
+        .populate('createdBy', 'name email')
+        .sort('-createdAt');
+    
+    res.json({ success: true, data: exports });
+});
+
+export const downloadImageExport = asyncHandler(async (req, res) => {
+    const exportRecord = await ImageExport.findById(req.params.id)
+        .populate({
+            path: 'productIds',
+            select: 'title images _id'
+        });
+
+    if (!exportRecord) {
+        throw new AppError('Export record not found', 404);
+    }
+
+    res.json({
+        success: true,
+        data: exportRecord
+    });
+});
+
+export const deleteImageExport = asyncHandler(async (req, res) => {
+    const exportRecord = await ImageExport.findById(req.params.id);
+    if (!exportRecord) {
+        throw new AppError('Export record not found', 404);
+    }
+
+    await ImageExport.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Export record deleted successfully' });
 });

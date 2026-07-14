@@ -21,7 +21,11 @@ import {
     bulkPinterestExport,
     getPinterestExports,
     deletePinterestExport,
-    downloadPinterestExport
+    downloadPinterestExport,
+    bulkImageExport,
+    getImageExports,
+    downloadImageExport,
+    deleteImageExport
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -146,6 +150,34 @@ router.get('/admin/pinterest-export/:id/download', verifyToken, isAdmin, downloa
  * @access Private/Admin
  */
 router.delete('/admin/pinterest-export/:id', verifyToken, isAdmin, deletePinterestExport);
+
+/**
+ * @route POST /api/products/admin/image-export
+ * @desc Record a bulk image export in the DB
+ * @access Private/Admin
+ */
+router.post('/admin/image-export', verifyToken, isAdmin, bulkImageExport);
+
+/**
+ * @route GET /api/products/admin/image-export
+ * @desc Get all bulk image exports
+ * @access Private/Admin
+ */
+router.get('/admin/image-export', verifyToken, isAdmin, getImageExports);
+
+/**
+ * @route GET /api/products/admin/image-export/:id/download
+ * @desc Download an image export record
+ * @access Private/Admin
+ */
+router.get('/admin/image-export/:id/download', verifyToken, isAdmin, downloadImageExport);
+
+/**
+ * @route DELETE /api/products/admin/image-export/:id
+ * @desc Delete an image export record
+ * @access Private/Admin
+ */
+router.delete('/admin/image-export/:id', verifyToken, isAdmin, deleteImageExport);
 
 /**
  * @route PUT /api/products/:id

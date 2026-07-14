@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const pinterestExportSchema = new mongoose.Schema({
+const imageExportSchema = new mongoose.Schema({
     exportDate: { type: Date, default: Date.now },
     scheduledDate: { type: Date, default: null },
     productCount: { type: Number, required: true },
@@ -9,6 +9,6 @@ const pinterestExportSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Delete records automatically after 30 days (30 * 24 * 60 * 60 seconds)
-pinterestExportSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
+imageExportSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
 
-export default mongoose.model('PinterestExport', pinterestExportSchema);
+export default mongoose.model('ImageExport', imageExportSchema);

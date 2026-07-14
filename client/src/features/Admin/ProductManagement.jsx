@@ -64,7 +64,7 @@ const ProductManagement = () => {
 	const [showScheduledModal, setShowScheduledModal] = useState(false);
 	const [showPrivateModal, setShowPrivateModal] = useState(false);
 	const [showAffiliateModal, setShowAffiliateModal] = useState(false);
-	const [showPinterestModal, setShowPinterestModal] = useState(false);
+	const [showSocialMediaMenu, setShowSocialMediaMenu] = useState(false);
 	const [selectedAffiliatePlatform, setSelectedAffiliatePlatform] = useState(null);
 
 	// Pagination & Infinite Scroll states
@@ -1050,7 +1050,7 @@ const ProductManagement = () => {
 						setSearchQuery={setSearchQuery}
 						setShowAffiliateModal={setShowAffiliateModal}
 						setShowPrivateModal={setShowPrivateModal}
-						setShowPinterestModal={setShowPinterestModal}
+						setShowSocialMediaMenu={setShowSocialMediaMenu}
 						setShowScheduledModal={setShowScheduledModal}
 						setSortBy={setSortBy}
 						sortBy={sortBy}
@@ -1156,9 +1156,9 @@ const ProductManagement = () => {
 				/>
 			)}
 			
-			{showPinterestModal && (
+			{showSocialMediaMenu && (
 				<PinterestExportModal
-					onClose={() => setShowPinterestModal(false)}
+					onClose={() => setShowSocialMediaMenu(false)}
 					onExportComplete={() => fetchProducts(currentPage, true)}
 				/>
 			)}

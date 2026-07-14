@@ -1,6 +1,6 @@
 import React from "react";
 import { FiCopy, FiX, FiRefreshCw, FiSearch, FiLink, FiLock } from "react-icons/fi";
-import { FaPinterest } from "react-icons/fa";
+import { FaPinterest, FaShareAlt } from "react-icons/fa";
 import Button from "../../components/ui/Button";
 import { SearchableDropdown } from "../../components/common/FilterPanel";
 import { BoxIcon } from "../../components/common/Icons";
@@ -40,7 +40,7 @@ const ProductList = ({
 	setSearchQuery,
 	setShowAffiliateModal,
 	setShowPrivateModal,
-	setShowPinterestModal,
+	setShowSocialMediaMenu,
 	setShowScheduledModal,
 	setSortBy,
 	sortBy,
@@ -76,11 +76,11 @@ const ProductList = ({
 										<FiLock /> Manage Products
 									</Button>
 									<Button
-										onClick={() => setShowPinterestModal(true)}
+										onClick={() => setShowSocialMediaMenu(true)}
 										variant="secondary"
-										className="border border-red-500/30 hover:border-red-500 text-red-400 hover:text-red-300 flex items-center gap-2"
+										className="border border-blue-500/30 hover:border-blue-500 text-blue-400 hover:text-blue-300 flex items-center gap-2"
 									>
-										<FaPinterest className="text-lg" /> Pinterest Export
+										<FaShareAlt className="text-lg" /> Social Media Handler
 									</Button>
 									<Button
 										onClick={() => setShowAffiliateModal(true)}

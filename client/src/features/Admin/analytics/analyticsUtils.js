@@ -64,7 +64,9 @@ export function metricBySubCategory(products, country, category, field) {
 export function filterByCountry(products, country) {
 	return products.filter((p) => {
 		const c = getCountries(p);
-		return c.includes(country) || c.includes("Worldwide");
+		// Match only the exact selected country.
+		// "Worldwide" products appear ONLY when the user selects the "Worldwide" segment.
+		return c.includes(country);
 	});
 }
 
