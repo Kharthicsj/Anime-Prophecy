@@ -86,11 +86,10 @@ const CountrySelectDropdown = ({ value, onChange, disabled }) => {
 									onChange(c.value);
 									setOpen(false);
 								}}
-								className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition hover:bg-zinc-800 ${
-									value === c.value
+								className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition hover:bg-zinc-800 ${value === c.value
 										? "bg-purple-900/30 text-violet-200"
 										: "text-zinc-200"
-								}`}
+									}`}
 							>
 								{c.flagValue ? (
 									<CountryFlag
@@ -129,10 +128,10 @@ const NewsletterBar = () => {
 		if (country === "Others") {
 			finalCountry = customCountry.trim()
 				? customCountry
-						.trim()
-						.replace(/\w\S*/g, (w) =>
-							w.replace(/^\w/, (c) => c.toUpperCase()),
-						)
+					.trim()
+					.replace(/\w\S*/g, (w) =>
+						w.replace(/^\w/, (c) => c.toUpperCase()),
+					)
 				: "Worldwide";
 		}
 
@@ -150,7 +149,7 @@ const NewsletterBar = () => {
 		} catch (err) {
 			setMsg(
 				err.response?.data?.message ||
-					"Something went wrong. Please try again.",
+				"Something went wrong. Please try again.",
 			);
 			setStatus("error");
 		}
@@ -217,11 +216,10 @@ const NewsletterBar = () => {
 
 				{status && status !== "loading" && (
 					<p
-						className={`text-sm font-medium ${
-							status === "success"
+						className={`text-sm font-medium ${status === "success"
 								? "text-green-400"
 								: "text-red-400"
-						}`}
+							}`}
 					>
 						{status === "success" ? "✓ " : "✗ "}
 						{msg}
@@ -272,7 +270,7 @@ const Footer = () => {
 		{
 			icon: InstagramIcon,
 			label: "Instagram",
-			href: "https://www.instagram.com/anime.prophecy_official?igsh=MWljb21tb2xzeGJ6Yw==",
+			href: "https://www.instagram.com/anime.prophecy",
 			color: "hover:text-pink-400",
 		},
 	];
