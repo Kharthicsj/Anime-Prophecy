@@ -134,9 +134,19 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 								Fetch multiple products from {platform} using Product IDs.
 							</p>
 						</div>
-						<button onClick={onClose} className="text-zinc-400 hover:text-white p-2">
-							<FiX className="w-5 h-5" />
-						</button>
+						<div className="flex items-center gap-3">
+							{platform === 'aliexpress' && (
+								<Button 
+									onClick={() => window.open('https://portals.aliexpress.com/adcenter/index.htm', '_blank')}
+									className="bg-[#FF4747] hover:bg-[#ff3333] text-white text-xs py-1.5 px-4 flex items-center gap-2 font-semibold shadow-lg shadow-red-900/20"
+								>
+									<SiAliexpress className="text-sm" /> Ad Center
+								</Button>
+							)}
+							<button onClick={onClose} className="text-zinc-400 hover:text-white p-2 transition-colors rounded-lg hover:bg-zinc-800">
+								<FiX className="w-5 h-5" />
+							</button>
+						</div>
 					</div>
 
 					{/* Controls */}
