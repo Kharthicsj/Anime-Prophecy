@@ -163,7 +163,7 @@ const PinterestExportModal = ({ onClose, onExportComplete }) => {
             header.push("Publish date");
         }
 
-        const rowArrays = dataList.map(p => {
+        const rows = dataList.map(p => {
             const title = `"${(p.title || "").replace(/"/g, '""')}"`;
             
             // Generate tags as hashtags
@@ -200,42 +200,31 @@ const PinterestExportModal = ({ onClose, onExportComplete }) => {
             // Keywords (Comma separated keywords)
             const keywords = `"${cleanTags.join(", ")}"`;
             
-            const productRows = [];
+            // Media URL & Thumbnail
+            // Pinterest bulk upload only accepts ONE URL per cell for standard pins.
+            // If Thumbnail is provided, Pinterest thinks it's a Video Pin and throws an error for images!
+            let mediaUrlStr = "";
+            let thumbnailStr = "";
 
-            // 1. Process all images (Standard Image Pins)
-            if (p.images && p.images.length > 0) {
-                p.images.forEach(img => {
-                    const mediaUrl = `"${img.url}"`;
-                    const thumbnail = `""`; // MUST be empty for standard images
-                    
-                    const rowArr = [title, mediaUrl, thumbnail, desc, link, pinterestBoard, keywords];
-                    if (usedSched) {
-                        rowArr.push(`"${new Date(usedSched).toISOString()}"`);
-                    }
-                    productRows.push(rowArr.join(","));
-                });
-            }
-
-            // 2. Process all videos (Video Pins)
             if (p.videos && p.videos.length > 0) {
-                p.videos.forEach(vid => {
-                    const mediaUrl = `"${vid.url}"`;
-                    const thumbnailStr = p.images?.[0]?.url || "";
-                    const thumbnail = `"${thumbnailStr}"`;
-                    
-                    const rowArr = [title, mediaUrl, thumbnail, desc, link, pinterestBoard, keywords];
-                    if (usedSched) {
-                        rowArr.push(`"${new Date(usedSched).toISOString()}"`);
-                    }
-                    productRows.push(rowArr.join(","));
-                });
+                // Video Pin
+                mediaUrlStr = p.videos[0].url;
+                thumbnailStr = p.images?.[0]?.url || "";
+            } else {
+                // Standard Image Pin (Strictly only the first image)
+                mediaUrlStr = p.images?.[0]?.url || "";
+                thumbnailStr = ""; // MUST be empty to avoid "Video Pin" error for standard images
             }
-            
-            return productRows;
-        });
 
-        // Flatten the arrays of arrays into a single array of strings
-        const rows = rowArrays.flat();
+            const mediaUrl = `"${mediaUrlStr}"`;
+            const thumbnail = `"${thumbnailStr}"`;
+            
+            const rowArr = [title, mediaUrl, thumbnail, desc, link, pinterestBoard, keywords];
+            if (usedSched) {
+                rowArr.push(`"${new Date(usedSched).toISOString()}"`);
+            }
+            return rowArr.join(",");
+        });
         
         return [header.join(","), ...rows].join("\n");
     };

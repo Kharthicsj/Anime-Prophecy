@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FiX } from "react-icons/fi";
+import { FiX, FiExternalLink } from "react-icons/fi";
 import { SiAliexpress, SiFlipkart } from "react-icons/si";
 import { FaAmazon } from "react-icons/fa";
 import apiClient from "../../services/apiClient";
@@ -138,9 +138,9 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 							{platform === 'aliexpress' && (
 								<Button 
 									onClick={() => window.open('https://portals.aliexpress.com/adcenter/index.htm', '_blank')}
-									className="bg-[#FF4747] hover:bg-[#ff3333] text-white text-xs py-1.5 px-4 flex items-center gap-2 font-semibold shadow-lg shadow-red-900/20"
+									className="bg-transparent hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs py-1.5 px-3 flex items-center gap-2 font-medium transition-colors"
 								>
-									<SiAliexpress className="text-sm" /> Ad Center
+									Ad Center <FiExternalLink className="text-zinc-400" />
 								</Button>
 							)}
 							<button onClick={onClose} className="text-zinc-400 hover:text-white p-2 transition-colors rounded-lg hover:bg-zinc-800">
