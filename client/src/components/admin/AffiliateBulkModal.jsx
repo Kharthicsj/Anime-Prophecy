@@ -54,7 +54,7 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 		try {
 			// Currently only aliexpress backend route is implemented, but frontend is ready
 			const endpoint = platform === 'aliexpress' ? "/products/admin/aliexpress/fetch" : `/products/admin/${platform}/fetch`;
-			const res = await apiClient.post(endpoint, { 
+			const res = await apiClient.post(endpoint, {
 				productIds: ids,
 				targetCountry,
 				targetCurrency
@@ -85,13 +85,13 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 		if (products.length === 0) return;
 		setIsSaving(true);
 		setError("");
-		
+
 		try {
 			// Apply default animeTag, category, and subCategory to all products before saving
 			const finalAnimeTag = defaultAnimeTag === "Other" ? customAnimeTag : defaultAnimeTag;
 			const finalCategory = defaultCategory === "Other" ? customCategory : defaultCategory;
 			const finalSubCategory = defaultSubCategory === "Other" ? customSubCategory : defaultSubCategory;
-			
+
 			const productsToSave = products.map(p => ({
 				...p,
 				animeTag: finalAnimeTag,
@@ -99,16 +99,16 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 				subCategory: finalSubCategory,
 				affiliatePlatform: platform === 'aliexpress' ? 'AliExpress' : platform === 'amazon' ? 'Amazon' : platform === 'flipkart' ? 'Flipkart' : platform
 			}));
-			
+
 			const res = await apiClient.post("/products/admin/bulk", { products: productsToSave });
-			
+
 			setImportResult({
 				count: res.data.data.count || 0,
 				skippedCount: res.data.data.skippedCount || 0,
 				logs: [...(res.data.data.insertedProducts || []), ...(res.data.data.skippedProducts || [])]
 			});
 			setIsSaving(false);
-			
+
 			// We intentionally do NOT auto-close the modal here so the admin can read the full log
 		} catch (err) {
 			setError(err.response?.data?.message || "Failed to save products.");
@@ -136,8 +136,8 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 						</div>
 						<div className="flex items-center gap-3">
 							{platform === 'aliexpress' && (
-								<Button 
-									onClick={() => window.open('https://portals.aliexpress.com/adcenter/index.htm', '_blank')}
+								<Button
+									onClick={() => window.open('https://portals.aliexpress.com/affiportals/web/portals.htm', '_blank')}
 									className="bg-transparent hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs py-1.5 px-3 flex items-center gap-2 font-medium transition-colors"
 								>
 									Ad Center <FiExternalLink className="text-zinc-400" />
@@ -291,9 +291,9 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 								)}
 							</div>
 						</div>
-						
+
 						{error && <div className="text-red-400 bg-red-900/20 border border-red-800/50 p-2 rounded-lg text-xs mt-2">{error}</div>}
-						
+
 						{importResult && (
 							<div className="mt-2 bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden text-sm flex flex-col">
 								<div className="flex items-center gap-4 p-3 bg-zinc-900 border-b border-zinc-800 shrink-0">
@@ -304,7 +304,7 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 										<span>⚠</span> {importResult.skippedCount} Skipped
 									</div>
 								</div>
-								
+
 								<div className="p-3 h-48 overflow-y-auto text-zinc-400 text-xs custom-scrollbar bg-black/50 font-mono">
 									<p className="font-semibold text-zinc-300 mb-2 font-sans flex items-center gap-2">
 										<span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -313,9 +313,9 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 									<ul className="space-y-1.5">
 										{importResult.logs?.map((log, idx) => (
 											<li key={idx} className="truncate">
-												<span className="text-zinc-300">Product {idx + 1}</span> =&gt; 
-												<span className="text-purple-400 mx-1">{log.id}</span> 
-												<span className="text-zinc-500">({log.title.substring(0, 30)}...)</span> - 
+												<span className="text-zinc-300">Product {idx + 1}</span> =&gt;
+												<span className="text-purple-400 mx-1">{log.id}</span>
+												<span className="text-zinc-500">({log.title.substring(0, 30)}...)</span> -
 												<span className={`ml-2 font-semibold ${log.status === 'Added' ? 'text-green-400' : 'text-amber-400'}`}>
 													{log.status}
 												</span>
@@ -323,7 +323,7 @@ const AffiliateBulkModal = ({ platform, onClose, onUploadSuccess, formAnimeOptio
 										))}
 									</ul>
 								</div>
-								
+
 								<div className="p-3 bg-zinc-900 flex justify-end border-t border-zinc-800 shrink-0">
 									<Button onClick={() => { onUploadSuccess(); onClose(); }} className="bg-zinc-800 hover:bg-zinc-700 text-xs py-1.5 px-4 text-white border border-zinc-700">
 										Done & Close

@@ -122,6 +122,29 @@ const SocialMediaExportGrid = ({ activeTab, onExportComplete }) => {
 	};
 
     const convertToCSV = (dataList, forcedScheduleDate) => {
+        const getFullAnimeName = (name) => {
+            if (!name) return name;
+            const lowerName = name.toLowerCase().trim();
+            const map = {
+                'aot': 'Attack of the titans',
+                'dbz': 'Dragon Ball Z',
+                'op': 'One Piece',
+                'mha': 'My Hero Academia',
+                'jjk': 'Jujutsu Kaisen',
+                'ds': 'Demon Slayer',
+                'sao': 'Sword Art Online',
+                'hxh': 'Hunter x Hunter',
+                'fmab': 'Fullmetal Alchemist'
+            };
+            return map[lowerName] || name;
+        };
+
+        const getFullCountryName = (country) => {
+            if (!country) return country;
+            if (country.toUpperCase().trim() === 'US') return 'USA';
+            return country;
+        };
+
         const usedSched = forcedScheduleDate !== undefined ? forcedScheduleDate : scheduleDate;
         
         const header = ["Title", "Media URL", "Thumbnail", "Description", "Link", "Pinterest board", "Keywords"];
@@ -149,8 +172,11 @@ const SocialMediaExportGrid = ({ activeTab, onExportComplete }) => {
             const baseDomain = window.location.hostname === 'localhost' ? window.location.origin : 'https://animeprophecy.com';
             const link = `"${baseDomain}/product/${p._id}"`;
             
-            const countryStr = p.countries?.[0] || "WORLDWIDE";
-            const animeStr = p.animeTag || "ANIME";
+            const rawCountry = p.countries?.[0] || "WORLDWIDE";
+            const rawAnime = p.animeTag || "ANIME";
+            
+            const countryStr = getFullCountryName(rawCountry);
+            const animeStr = getFullAnimeName(rawAnime);
             const boardStr = `${countryStr}/${animeStr}`.toUpperCase();
             const pinterestBoard = `"${boardStr.replace(/"/g, '""')}"`;
             
