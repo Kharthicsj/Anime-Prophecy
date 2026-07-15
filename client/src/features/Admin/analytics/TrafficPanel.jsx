@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import apiClient from "../../../services/apiClient";
-import { Loader2, Laptop, Activity, RefreshCw, Video, Smartphone } from "lucide-react";
+import { Loader2, Laptop, Activity, RefreshCw, Video, Smartphone, ExternalLink, Search } from "lucide-react";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
@@ -278,7 +278,7 @@ const TrafficPanel = () => {
                     </div>
                     <p className="text-sm text-zinc-500">Real-time web traffic insights powered by PostHog</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         type="button"
                         onClick={fetchAnalytics}
@@ -288,12 +288,23 @@ const TrafficPanel = () => {
                         Refresh Data
                     </button>
                     <a
+                        href="https://search.google.com/search-console"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/50 bg-blue-600/10 px-3 py-2 text-xs font-semibold text-blue-400 transition-colors hover:bg-blue-600/20"
+                    >
+                        <Search className="h-3.5 w-3.5" />
+                        Search Console
+                        <ExternalLink className="h-3 w-3 opacity-70" />
+                    </a>
+                    <a
                         href="https://us.posthog.com/project/489126/web"
                         target="_blank"
                         rel="noreferrer"
                         className="flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-600/10 px-3 py-2 text-xs font-semibold text-violet-400 transition-colors hover:bg-violet-600/20"
                     >
                         Open in PostHog
+                        <ExternalLink className="h-3 w-3 opacity-70" />
                     </a>
                 </div>
             </div>
