@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../hooks/useAppContext";
 import apiClient from "../../services/apiClient";
@@ -107,8 +107,71 @@ const LandingPage = () => {
 	// Show full-screen loader until hero image resolved
 	if (heroLoading) return <LoadingAnimation />;
 
+	// Generate Schema.org JSON-LD for Google Rich Results
+	const structuredData = useMemo(() => {
+		const baseSchema = [
+			{
+				"@type": "WebSite",
+				"@id": "https://animeprophecy.com/#website",
+				"url": "https://animeprophecy.com/",
+				"name": "Prophecy Hub",
+				"description": "Anime Merchandise Hub featuring the best anime figures, clothing, and accessories.",
+				"potentialAction": {
+					"@type": "SearchAction",
+					"target": "https://animeprophecy.com/country/worldwide?search={search_term_string}",
+					"query-input": "required name=search_term_string"
+				}
+			},
+			{
+				"@type": "Organization",
+				"@id": "https://animeprophecy.com/#organization",
+				"name": "Anime Prophecy",
+				"url": "https://animeprophecy.com/",
+				"logo": "https://animeprophecy.com/assets/main_logo.png" // Update this if your logo path changes
+			}
+		];
+
+		if (trendingProducts && trendingProducts.length > 0) {
+			baseSchema.push({
+				"@type": "ItemList",
+				"itemListElement": trendingProducts.map((product, index) => ({
+					"@type": "ListItem",
+					"position": index + 1,
+					"item": {
+						"@type": "Product",
+						"name": product.title,
+						"image": product.images?.[0]?.url || "",
+						"description": product.description || product.title,
+						"brand": {
+							"@type": "Brand",
+							"name": product.store || "Anime Prophecy"
+						},
+						"offers": {
+							"@type": "Offer",
+							"priceCurrency": product.currency || "USD",
+							"price": product.price,
+							"availability": "https://schema.org/InStock"
+						}
+					}
+				}))
+			});
+		}
+		
+		const schema = {
+			"@context": "https://schema.org",
+			"@graph": baseSchema
+		};
+		
+		return JSON.stringify(schema);
+	}, [trendingProducts]);
+
 	return (
 		<div className="min-h-screen overflow-x-hidden bg-zinc-950 text-white font-[family-name:var(--font-sans)]">
+			{/* Inject Google Rich Results Schema */}
+			{structuredData && (
+				<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />
+			)}
+
 			{/* ── Sticky Header ── */}
 			<header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl">
 				<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
