@@ -222,6 +222,25 @@ const Homepage = () => {
 		return JSON.stringify(schema);
 	}, [products]);
 
+	// Inject JSON-LD into the head to prevent React Hydration errors
+	useEffect(() => {
+		if (structuredData) {
+			let script = document.getElementById("json-ld-schema-home");
+			if (!script) {
+				script = document.createElement("script");
+				script.id = "json-ld-schema-home";
+				script.type = "application/ld+json";
+				document.head.appendChild(script);
+			}
+			script.innerHTML = structuredData;
+		}
+		
+		return () => {
+			const script = document.getElementById("json-ld-schema-home");
+			if (script) script.remove();
+		};
+	}, [structuredData]);
+
 	// Trending carousel state
 	const [trendingHovered, setTrendingHovered] = useState(false);
 	const trendingTrackRef = useRef(null);
@@ -454,11 +473,6 @@ const Homepage = () => {
 				fontFamily: "var(--font-sans, Inter, system-ui, sans-serif)",
 			}}
 		>
-			{/* Inject Google Rich Results Schema */}
-			{structuredData && (
-				<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />
-			)}
-
 			{/* Global keyframes */}
 			<style>{`
 				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
