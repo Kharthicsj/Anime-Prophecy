@@ -83,7 +83,22 @@ const Homepage = () => {
 		
 		const initialFilters = {};
 		if (animeTagSlug) {
-			initialFilters.animeTag = animeTagSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+			const lowerSlug = animeTagSlug.toLowerCase();
+			const ACRONYMS = { 
+				"aot": "AOT", 
+				"jjk": "JJK", 
+				"mha": "MHA", 
+				"dbz": "DBZ", 
+				"sao": "SAO", 
+				"hxh": "HxH",
+				"fmab": "FMAB"
+			};
+			
+			if (ACRONYMS[lowerSlug]) {
+				initialFilters.animeTag = ACRONYMS[lowerSlug];
+			} else {
+				initialFilters.animeTag = animeTagSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+			}
 		}
 		return initialFilters;
 	});
