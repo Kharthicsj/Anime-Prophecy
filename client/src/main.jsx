@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
 import posthog from "posthog-js";
@@ -15,10 +15,17 @@ if (import.meta.env.DEV) {
     posthog.opt_out_capturing();
 }
 
-createRoot(document.getElementById("root")).render(
+const rootElement = document.getElementById("root");
+const app = (
 	<StrictMode>
 		<PostHogProvider client={posthog}>
 			<App />
 		</PostHogProvider>
-	</StrictMode>,
+	</StrictMode>
 );
+
+if (rootElement.hasChildNodes()) {
+	hydrateRoot(rootElement, app);
+} else {
+	createRoot(rootElement).render(app);
+}

@@ -100,10 +100,16 @@ const ProductCarousel = ({
 						className="relative h-full shrink-0"
 						style={{ width: `${100 / count}%` }}
 					>
+						{/* Blurred background layer to fill empty space cleanly */}
+						<div
+							className="absolute inset-0 bg-cover bg-center blur-3xl opacity-40 scale-110"
+							style={{ backgroundImage: `url(${item.image?.url || item.url})` }}
+							aria-hidden="true"
+						/>
 						<img
 							src={item.image?.url || item.url}
 							alt={item.title || `Slide ${i + 1}`}
-							className="block h-full w-full object-cover"
+							className="relative z-0 block h-full w-full object-contain object-center md:object-right p-4 md:py-8 md:pr-16 lg:pr-32 drop-shadow-2xl"
 							draggable={false}
 						/>
 						{/* Cinematic dark overlay — transparent at top, deep at bottom for text */}

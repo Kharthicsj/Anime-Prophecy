@@ -48,8 +48,8 @@ app.use(helmet({
 const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, '');
 
 const corsOrigins = process.env.NODE_ENV === 'production'
-    ? [process.env.CLIENT_URL, 'https://animeprophecy.onrender.com', 'https://animeprophecy.com']
-    : ['http://localhost:5173', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com'];
+    ? [process.env.CLIENT_URL, 'http://localhost:45678', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com']
+    : ['http://localhost:5173', 'http://localhost:45678', 'https://animeprophecy.onrender.com', 'https://animeprophecy.com'];
 
 const allowedOrigins = new Set(
     corsOrigins

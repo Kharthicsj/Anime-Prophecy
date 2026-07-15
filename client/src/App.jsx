@@ -79,6 +79,14 @@ const AppRoutes = () => {
 				}
 			/>
 			<Route
+				path="/country/:countrySlug/anime/:animeTagSlug"
+				element={
+					<PageWithFooter>
+						<Homepage />
+					</PageWithFooter>
+				}
+			/>
+			<Route
 				path="/legal/:page"
 				element={
 					<PageWithFooter>

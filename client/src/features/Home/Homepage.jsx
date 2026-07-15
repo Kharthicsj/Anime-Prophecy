@@ -34,7 +34,7 @@ let homepageCache = null;
 
 const Homepage = () => {
 	const navigate = useNavigate();
-	const { countrySlug } = useParams();
+	const { countrySlug, animeTagSlug } = useParams();
 	const { selectedCountry, updateCountry } = useAppContext();
 
 	const countryFromRoute = useMemo(() => {
@@ -80,7 +80,12 @@ const Homepage = () => {
 		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
 			return homepageCache.filters;
 		}
-		return {};
+		
+		const initialFilters = {};
+		if (animeTagSlug) {
+			initialFilters.animeTag = animeTagSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+		}
+		return initialFilters;
 	});
 	const [currentPage, setCurrentPage] = useState(() => {
 		if (homepageCache && homepageCache.activeCountryValue === activeCountryValue) {
@@ -146,6 +151,30 @@ const Homepage = () => {
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
 	const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+
+	/* ══════════ DYNAMIC SEO OPTIMIZATION ══════════ */
+	useEffect(() => {
+		const baseTitle = 'Anime Prophecy';
+		const animeName = filters.animeTag && filters.animeTag !== "All Anime" ? filters.animeTag : null;
+		const region = activeCountry?.label || "Worldwide";
+		
+		let title = animeName 
+			? `${animeName} Merchandise & Figures | ${baseTitle} ${region}`
+			: `Anime Merchandise & Figures | ${baseTitle} ${region}`;
+			
+		document.title = title;
+
+		let metaDescription = document.querySelector('meta[name="description"]');
+		if (!metaDescription) {
+			metaDescription = document.createElement('meta');
+			metaDescription.name = "description";
+			document.head.appendChild(metaDescription);
+		}
+		
+		metaDescription.content = animeName
+			? `Shop the best ${animeName} anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`
+			: `Shop the best anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`;
+	}, [filters.animeTag, activeCountry?.label]);
 
 	// Trending carousel state
 	const [trendingHovered, setTrendingHovered] = useState(false);

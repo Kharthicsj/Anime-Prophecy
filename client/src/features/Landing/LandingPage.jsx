@@ -78,7 +78,7 @@ const LandingPage = () => {
 					"/trending/products?country=Worldwide",
 				);
 				const products = res.data?.data?.products;
-				setTrendingProducts(Array.isArray(products) ? products : []);
+				setTrendingProducts(Array.isArray(products) ? products.slice(0, 10) : []);
 			} catch {
 				/* silent */
 			} finally {
