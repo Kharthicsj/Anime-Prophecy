@@ -46,10 +46,19 @@ const PageWithFooter = ({ children }) => (
 
 const AppRoutes = () => {
 	const { getCurrentUser } = useAuth();
+	const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 	useEffect(() => {
-		getCurrentUser();
+		const initializeApp = async () => {
+			await getCurrentUser();
+			setIsInitialLoading(false);
+		};
+		initializeApp();
 	}, [getCurrentUser]);
+
+	if (isInitialLoading) {
+		return <LoadingAnimation />;
+	}
 
 	return (
 		<Routes>

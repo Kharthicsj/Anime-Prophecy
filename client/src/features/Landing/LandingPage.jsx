@@ -181,6 +181,9 @@ const LandingPage = () => {
 		};
 	}, [structuredData]);
 
+	// Show full-screen loader until hero image resolved
+	if (heroLoading) return <LoadingAnimation />;
+
 	return (
 		<div className="min-h-screen overflow-x-hidden bg-zinc-950 text-white font-[family-name:var(--font-sans)]">
 			{/* ── Sticky Header ── */}
