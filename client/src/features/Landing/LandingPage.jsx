@@ -104,9 +104,6 @@ const LandingPage = () => {
 
 	const bgUrl = heroImageUrl || landingGif;
 
-	// Show full-screen loader until hero image resolved
-	if (heroLoading) return <LoadingAnimation />;
-
 	// Generate Schema.org JSON-LD for Google Rich Results
 	const structuredData = useMemo(() => {
 		const baseSchema = [
@@ -164,6 +161,9 @@ const LandingPage = () => {
 		
 		return JSON.stringify(schema);
 	}, [trendingProducts]);
+
+	// Show full-screen loader until hero image resolved
+	if (heroLoading) return <LoadingAnimation />;
 
 	return (
 		<div className="min-h-screen overflow-x-hidden bg-zinc-950 text-white font-[family-name:var(--font-sans)]">
