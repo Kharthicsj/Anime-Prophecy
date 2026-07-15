@@ -191,6 +191,37 @@ const Homepage = () => {
 			: `Shop the best anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`;
 	}, [filters.animeTag, activeCountry?.label]);
 
+	// Generate Schema.org JSON-LD for Google Rich Results
+	const structuredData = useMemo(() => {
+		if (!products || products.length === 0) return null;
+		
+		const schema = {
+			"@context": "https://schema.org/",
+			"@type": "ItemList",
+			"itemListElement": products.slice(0, 10).map((product, index) => ({
+				"@type": "ListItem",
+				"position": index + 1,
+				"item": {
+					"@type": "Product",
+					"name": product.title,
+					"image": product.images?.[0]?.url || "",
+					"description": product.description || product.title,
+					"brand": {
+						"@type": "Brand",
+						"name": product.store || "Anime Prophecy"
+					},
+					"offers": {
+						"@type": "Offer",
+						"priceCurrency": product.currency || "USD",
+						"price": product.price,
+						"availability": "https://schema.org/InStock"
+					}
+				}
+			}))
+		};
+		return JSON.stringify(schema);
+	}, [products]);
+
 	// Trending carousel state
 	const [trendingHovered, setTrendingHovered] = useState(false);
 	const trendingTrackRef = useRef(null);
@@ -423,6 +454,11 @@ const Homepage = () => {
 				fontFamily: "var(--font-sans, Inter, system-ui, sans-serif)",
 			}}
 		>
+			{/* Inject Google Rich Results Schema */}
+			{structuredData && (
+				<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />
+			)}
+
 			{/* Global keyframes */}
 			<style>{`
 				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
