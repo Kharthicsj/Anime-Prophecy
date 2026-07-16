@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useMemo, useState, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppContext } from "../../hooks/useAppContext";
 import apiClient from "../../services/apiClient";
@@ -167,29 +168,17 @@ const Homepage = () => {
 	}, []);
 	const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
-	/* ══════════ DYNAMIC SEO OPTIMIZATION ══════════ */
-	useEffect(() => {
-		const baseTitle = 'Anime Prophecy';
-		const animeName = filters.animeTag && filters.animeTag !== "All Anime" ? filters.animeTag : null;
-		const region = activeCountry?.label || "Worldwide";
+	const baseTitle = 'Anime Prophecy';
+	const animeName = filters.animeTag && filters.animeTag !== "All Anime" ? filters.animeTag : null;
+	const region = activeCountry?.label || "Worldwide";
+	
+	const pageTitle = animeName 
+		? `${animeName} Merchandise & Figures | ${baseTitle} ${region}`
+		: `Anime Merchandise & Figures | ${baseTitle} ${region}`;
 		
-		let title = animeName 
-			? `${animeName} Merchandise & Figures | ${baseTitle} ${region}`
-			: `Anime Merchandise & Figures | ${baseTitle} ${region}`;
-			
-		document.title = title;
-
-		let metaDescription = document.querySelector('meta[name="description"]');
-		if (!metaDescription) {
-			metaDescription = document.createElement('meta');
-			metaDescription.name = "description";
-			document.head.appendChild(metaDescription);
-		}
-		
-		metaDescription.content = animeName
-			? `Shop the best ${animeName} anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`
-			: `Shop the best anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`;
-	}, [filters.animeTag, activeCountry?.label]);
+	const pageDescription = animeName
+		? `Shop the best ${animeName} anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`
+		: `Shop the best anime merchandise, figures, clothing, and accessories with global shipping to ${region}.`;
 
 	// Generate Schema.org JSON-LD for Google Rich Results
 	const structuredData = useMemo(() => {
@@ -221,25 +210,6 @@ const Homepage = () => {
 		};
 		return JSON.stringify(schema);
 	}, [products]);
-
-	// Inject JSON-LD into the head to prevent React Hydration errors
-	useEffect(() => {
-		if (structuredData) {
-			let script = document.getElementById("json-ld-schema-home");
-			if (!script) {
-				script = document.createElement("script");
-				script.id = "json-ld-schema-home";
-				script.type = "application/ld+json";
-				document.head.appendChild(script);
-			}
-			script.innerHTML = structuredData;
-		}
-		
-		return () => {
-			const script = document.getElementById("json-ld-schema-home");
-			if (script) script.remove();
-		};
-	}, [structuredData]);
 
 	// Trending carousel state
 	const [trendingHovered, setTrendingHovered] = useState(false);
@@ -473,6 +443,13 @@ const Homepage = () => {
 				fontFamily: "var(--font-sans, Inter, system-ui, sans-serif)",
 			}}
 		>
+			<Helmet>
+				<title>{pageTitle}</title>
+				<meta name="description" content={pageDescription} />
+				{structuredData && (
+					<script type="application/ld+json">{structuredData}</script>
+				)}
+			</Helmet>
 			{/* Global keyframes */}
 			<style>{`
 				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

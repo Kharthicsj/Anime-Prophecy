@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import {
 	BrowserRouter as Router,
 	Routes,
@@ -172,12 +173,14 @@ const AppRoutes = () => {
  */
 function App() {
 	return (
-		<AppProvider>
-			<Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-				<ScrollToTop />
-				<AppRoutes />
-			</Router>
-		</AppProvider>
+		<HelmetProvider>
+			<AppProvider>
+				<Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+					<ScrollToTop />
+					<AppRoutes />
+				</Router>
+			</AppProvider>
+		</HelmetProvider>
 	);
 }
 

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
 import { useParams, useNavigate } from "react-router-dom";
 import apiClient from "../../services/apiClient";
 import MainHeader from "../../components/common/MainHeader";
@@ -265,6 +266,45 @@ const ProductDisplayPage = () => {
 		}
 	};
 
+	// Generate Schema.org JSON-LD for Google Rich Results
+	const structuredData = useMemo(() => {
+		if (!product) return null;
+		const schema = {
+			"@context": "https://schema.org/",
+			"@type": "Product",
+			"name": product.title,
+			"image": product.images?.[0]?.url || "",
+			"description": product.description || product.title,
+			"brand": {
+				"@type": "Brand",
+				"name": product.store || "Anime Prophecy"
+			},
+			"offers": {
+				"@type": "Offer",
+				"priceCurrency": product.currency || "USD",
+				"price": product.price,
+				"availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+				"url": window.location.href
+			}
+		};
+		if (product.rating > 0) {
+			schema.aggregateRating = {
+				"@type": "AggregateRating",
+				"ratingValue": product.rating,
+				"reviewCount": product.views > 0 ? Math.max(1, Math.floor(product.views / 10)) : 1
+			};
+		}
+		return JSON.stringify(schema);
+	}, [product]);
+
+	const pageTitle = product 
+		? `${product.title} | Anime Prophecy`
+		: "Product | Anime Prophecy";
+
+	const pageDescription = product
+		? `Buy ${product.title} from ${product.store || "Anime Prophecy"}. ${product.description ? product.description.substring(0, 120) + "..." : "Shop premium anime merchandise."}`
+		: "Shop premium anime merchandise.";
+
 	if (loading) return <LoadingAnimation />;
 
 	if (error || !product) {
@@ -305,8 +345,17 @@ const ProductDisplayPage = () => {
 	const lightboxPrev = () => setLightboxIndex(i => (i - 1 + lightboxImages.length) % lightboxImages.length);
 	const lightboxNext = () => setLightboxIndex(i => (i + 1) % lightboxImages.length);
 
+
+
 	return (
 		<div className="min-h-screen bg-[#050505] pb-16 relative overflow-hidden font-sans">
+			<Helmet>
+				<title>{pageTitle}</title>
+				<meta name="description" content={pageDescription} />
+				{structuredData && (
+					<script type="application/ld+json">{structuredData}</script>
+				)}
+			</Helmet>
 			<style>{`
 				@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 				.scrollbar-none::-webkit-scrollbar { display: none; }

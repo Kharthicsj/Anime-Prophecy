@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../hooks/useAppContext";
 import apiClient from "../../services/apiClient";
@@ -162,30 +163,18 @@ const LandingPage = () => {
 		return JSON.stringify(schema);
 	}, [trendingProducts]);
 
-	// Inject JSON-LD into the head to prevent React Hydration errors
-	useEffect(() => {
-		if (structuredData) {
-			let script = document.getElementById("json-ld-schema-landing");
-			if (!script) {
-				script = document.createElement("script");
-				script.id = "json-ld-schema-landing";
-				script.type = "application/ld+json";
-				document.head.appendChild(script);
-			}
-			script.innerHTML = structuredData;
-		}
-		
-		return () => {
-			const script = document.getElementById("json-ld-schema-landing");
-			if (script) script.remove();
-		};
-	}, [structuredData]);
+
 
 	// Show full-screen loader until hero image resolved
 	if (heroLoading) return <LoadingAnimation />;
 
 	return (
 		<div className="min-h-screen overflow-x-hidden bg-zinc-950 text-white font-[family-name:var(--font-sans)]">
+			<Helmet>
+				{structuredData && (
+					<script type="application/ld+json">{structuredData}</script>
+				)}
+			</Helmet>
 			{/* ── Sticky Header ── */}
 			<header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl">
 				<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
