@@ -49,8 +49,21 @@ const SocialMediaExportHistory = ({ onHistoryChange }) => {
 
         const getFullCountryName = (country) => {
             if (!country) return country;
-            if (country.toUpperCase().trim() === 'US') return 'USA';
-            return country;
+            const lower = country.toLowerCase().trim();
+            const map = {
+                'us': 'USA',
+                'usa': 'USA',
+                'uk': 'UNITED KINGDOM',
+                'eu': 'EUROPE',
+                'ca': 'CANADA',
+                'au': 'AUSTRALIA',
+                'nz': 'NEW ZEALAND',
+                'jp': 'JAPAN',
+                'cn': 'CHINA',
+                'in': 'INDIA',
+                'kr': 'SOUTH KOREA'
+            };
+            return map[lower] || country;
         };
 
         const header = ["Title", "Media URL", "Thumbnail", "Description", "Link", "Pinterest board", "Keywords"];
