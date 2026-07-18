@@ -25,11 +25,15 @@ import {
     bulkImageExport,
     getImageExports,
     downloadImageExport,
-    deleteImageExport
+    deleteImageExport,
+    checkExistingIds
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
+import multer from 'multer';
+import { fetchCjProductsByKeyword, fetchCjProductsByIds } from '../controllers/cjController.js';
 
 const router = express.Router();
+const upload = multer({ dest: 'uploads/' });
 
 /**
  * @route GET /api/products/admin/all
@@ -46,11 +50,32 @@ router.get('/admin/all', verifyToken, isAdmin, getAllProductsAdmin);
 router.post('/admin/aliexpress/fetch', verifyToken, isAdmin, fetchAliExpressBulk);
 
 /**
+ * @route POST /api/products/admin/cj/search
+ * @desc Fetch bulk products from CJ Affiliate API via keyword search
+ * @access Private/Admin
+ */
+router.post('/admin/cj/search', verifyToken, isAdmin, fetchCjProductsByKeyword);
+
+/**
+ * @route POST /api/products/admin/cj/fetch-ids
+ * @desc Fetch bulk products from CJ Affiliate API via IDs
+ * @access Private/Admin
+ */
+router.post('/admin/cj/fetch-ids', verifyToken, isAdmin, fetchCjProductsByIds);
+
+/**
  * @route POST /api/products/admin/bulk
  * @desc Bulk create products
  * @access Private/Admin
  */
 router.post('/admin/bulk', verifyToken, isAdmin, bulkCreateProducts);
+
+/**
+ * @route POST /api/products/admin/check-existing
+ * @desc Check which affiliate IDs already exist in the database
+ * @access Private/Admin
+ */
+router.post('/admin/check-existing', verifyToken, isAdmin, checkExistingIds);
 
 /**
  * @route GET /api/products/analytics/stats

@@ -443,6 +443,24 @@ export const fetchAliExpressBulk = asyncHandler(async (req, res) => {
  * @route POST /api/products/admin/bulk
  * @access Private/Admin
  */
+export const checkExistingIds = asyncHandler(async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+        return res.status(400).json({ success: false, message: "No IDs provided" });
+    }
+
+    const existingProducts = await Product.find({ 
+        affiliateProductId: { $in: ids.map(id => String(id)) } 
+    }).select('affiliateProductId');
+
+    const existingIds = existingProducts.map(p => p.affiliateProductId);
+
+    res.json({
+        success: true,
+        data: { existingIds }
+    });
+});
+
 export const bulkCreateProducts = asyncHandler(async (req, res) => {
     const { products } = req.body;
 

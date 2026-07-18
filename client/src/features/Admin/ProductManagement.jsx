@@ -29,6 +29,7 @@ import AffiliateSelectionModal from "../../components/admin/AffiliateSelectionMo
 import AffiliateBulkModal from "../../components/admin/AffiliateBulkModal";
 import PrivateProductsModal from "../../components/admin/PrivateProductsModal";
 import PinterestExportModal from "../../components/admin/PinterestExportModal";
+import CjAffiliateBulkModal from "../../components/admin/CjAffiliateBulkModal";
 
 import ProductForm from "./ProductForm";
 import ProductList from "./ProductList";
@@ -1219,7 +1220,18 @@ const ProductManagement = () => {
 				/>
 			)}
 
-			{selectedAffiliatePlatform && (
+			{selectedAffiliatePlatform === 'cj' && (
+				<CjAffiliateBulkModal
+					onClose={() => setSelectedAffiliatePlatform(null)}
+					onUploadSuccess={() => {
+						setProducts([]);
+						setCurrentPage(1);
+						setHasMore(true);
+						fetchProducts(1, true);
+					}}
+				/>
+			)}
+			{selectedAffiliatePlatform && selectedAffiliatePlatform !== 'cj' && (
 				<AffiliateBulkModal
 					platform={selectedAffiliatePlatform}
 					onClose={() => setSelectedAffiliatePlatform(null)}

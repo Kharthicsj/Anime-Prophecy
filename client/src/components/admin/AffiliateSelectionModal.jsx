@@ -6,6 +6,7 @@ import { FaAmazon } from "react-icons/fa";
 const AffiliateSelectionModal = ({ onClose, onSelect }) => {
 	const platforms = [
 		{ id: 'aliexpress', name: 'AliExpress', icon: <SiAliexpress />, color: 'orange-500', bg: 'hover:border-orange-500', desc: 'Fetch products using AliExpress API', warning: 'Requires VPN connection to avoid API timeouts.' },
+		{ id: 'cj', name: 'CJ Affiliate', icon: <FiLink />, color: 'green-500', bg: 'hover:border-green-500', desc: 'Fetch bulk products securely via CJ API.' },
 		{ id: 'amazon', name: 'Amazon (PA-API)', icon: <FaAmazon />, color: 'blue-500', bg: 'hover:border-blue-500', desc: 'Fetch products using Amazon Affiliate API (Coming Soon)' },
 		{ id: 'flipkart', name: 'Flipkart', icon: <SiFlipkart />, color: 'yellow-500', bg: 'hover:border-yellow-500', desc: 'Fetch products using Flipkart Affiliate API (Coming Soon)' },
 	];
@@ -28,8 +29,8 @@ const AffiliateSelectionModal = ({ onClose, onSelect }) => {
 					{platforms.map((p) => (
 						<button
 							key={p.id}
-							onClick={() => p.id === 'aliexpress' ? onSelect(p.id) : null}
-							className={`text-left p-5 rounded-xl border flex flex-col gap-3 transition-all ${p.id === 'aliexpress' ? `bg-zinc-800 border-zinc-700 ${p.bg} cursor-pointer hover:shadow-lg text-white` : 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed text-zinc-500'}`}
+							onClick={() => (p.id === 'aliexpress' || p.id === 'cj') ? onSelect(p.id) : null}
+							className={`text-left p-5 rounded-xl border flex flex-col gap-3 transition-all ${(p.id === 'aliexpress' || p.id === 'cj') ? `bg-zinc-800 border-zinc-700 ${p.bg} cursor-pointer hover:shadow-lg text-white` : 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed text-zinc-500'}`}
 						>
 							<div className={`text-4xl text-${p.color}`}>{p.icon}</div>
 							<div className="w-full">
