@@ -1,9 +1,11 @@
-import React from "react";
-import { FiLink, FiX } from "react-icons/fi";
+import React, { useState } from "react";
+import { FiLink, FiX, FiTerminal, FiRefreshCw } from "react-icons/fi";
 import { SiAliexpress, SiFlipkart } from "react-icons/si";
 import { FaAmazon } from "react-icons/fa";
+import apiClient from "../../services/apiClient";
 
-const AffiliateSelectionModal = ({ onClose, onSelect }) => {
+const AffiliateSelectionModal = ({ onClose, onSelect, onOpenCronLogs }) => {
+	const [isSyncing, setIsSyncing] = useState(false);
 	const platforms = [
 		{ id: 'aliexpress', name: 'AliExpress', icon: <SiAliexpress />, color: 'orange-500', bg: 'hover:border-orange-500', desc: 'Fetch products using AliExpress API', warning: 'Requires VPN connection to avoid API timeouts.' },
 		{ id: 'cj', name: 'CJ Affiliate', icon: <FiLink />, color: 'green-500', bg: 'hover:border-green-500', desc: 'Fetch bulk products securely via CJ API.' },
@@ -21,9 +23,36 @@ const AffiliateSelectionModal = ({ onClose, onSelect }) => {
 						</h2>
 						<p className="text-sm text-zinc-400 mt-1">Select the affiliate platform you want to import from.</p>
 					</div>
-					<button onClick={onClose} className="text-zinc-400 hover:text-white p-2">
+					<div className="flex items-center gap-3">
+						<button 
+							onClick={async () => {
+								if (isSyncing) return;
+								try {
+									setIsSyncing(true);
+									const res = await apiClient.post('/products/admin/trigger-sync');
+									alert(res.data.message || 'Sync completed successfully!');
+								} catch (err) {
+									alert('Failed to trigger sync.');
+								} finally {
+									setIsSyncing(false);
+								}
+							}}
+							disabled={isSyncing}
+							className={`whitespace-nowrap cursor-pointer text-xs font-semibold ${isSyncing ? 'text-zinc-500 bg-zinc-800' : 'text-zinc-300 bg-blue-900/30 hover:bg-blue-900/50 border-blue-900'} px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-2`}
+						>
+							<FiRefreshCw className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Syncing...' : 'Force Sync'}
+						</button>
+						<button 
+							onClick={() => { onClose(); if (onOpenCronLogs) onOpenCronLogs(); }} 
+							className="whitespace-nowrap cursor-pointer text-xs font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg border border-zinc-700 transition-colors flex items-center gap-2"
+						>
+							<FiTerminal /> View Sync Logs
+						</button>
+						<button onClick={onClose} className="cursor-pointer text-zinc-400 hover:text-white p-2 flex items-center justify-center">
 						<FiX className="w-5 h-5" />
-					</button>
+
+						</button>
+					</div>
 				</div>
 				<div className="p-6 bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
 					{platforms.map((p) => (

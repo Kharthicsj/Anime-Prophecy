@@ -85,6 +85,7 @@ const mapCjProduct = (p, propertyId) => {
         images: p.imageLink ? [p.imageLink] : [],
         affiliateLink: finalAffiliateLink,
         affiliateProductId: p.id,
+        affiliatePlatform: 'CJ Affiliate',
         store: p.advertiserName || 'CJ Affiliate',
         category: derivedCategory,
         countries: [mappedCountry],
@@ -189,4 +190,42 @@ export const fetchCjProductsByIds = asyncHandler(async (req, res) => {
     });
 });
 
+export const getCjProductDetails = async (productIds) => {
+    if (!process.env.CJ_PERSONAL_ACCESS_TOKEN || !process.env.CJ_PUBLISHER_ID) {
+        return [];
+    }
 
+    const query = `
+        query FetchProductsByIds($companyId: ID!, $propertyId: ID!, $productIds: [ID!]) {
+            shoppingProducts(companyId: $companyId, productIds: $productIds) {
+                resultList {
+                    id
+                    title
+                    price { amount currency }
+                    imageLink
+                    description
+                    advertiserName
+                    link
+                    adId
+                    linkCode(pid: $propertyId) { clickUrl }
+                }
+            }
+        }
+    `;
+
+    const propertyId = process.env.CJ_PROPERTY_ID || process.env.CJ_PUBLISHER_ID;
+
+    const variables = {
+        companyId: process.env.CJ_PUBLISHER_ID,
+        propertyId: propertyId,
+        productIds: productIds.map(id => String(id))
+    };
+
+    try {
+        const cjProducts = await fetchCjProductsByQuery(query, variables);
+        return cjProducts.map(p => mapCjProduct(p, propertyId));
+    } catch (error) {
+        console.error("Error fetching CJ Products for sync:", error.message);
+        return [];
+    }
+};

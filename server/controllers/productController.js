@@ -3,9 +3,11 @@ import GlobalSettings from '../models/GlobalSettings.js';
 import { asyncHandler, AppError } from '../utils/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
+import { manualSyncAffiliateProducts as syncAffiliateProducts } from '../cron/priceSync.js';
 import { getAliExpressProductDetails } from '../utils/aliexpressApi.js';
 import PinterestExport from '../models/PinterestExport.js';
 import ImageExport from '../models/ImageExport.js';
+import CronLog from '../models/CronLog.js';
 
 /**
  * Get all products with filters
@@ -909,6 +911,49 @@ export const deletePinterestExport = asyncHandler(async (req, res) => {
     await PinterestExport.findByIdAndDelete(req.params.id);
 
     res.json({ success: true, message: 'Export record deleted successfully' });
+});
+
+/**
+ * Get all cron logs
+ * @route GET /api/products/admin/cron-logs
+ * @access Private/Admin
+ */
+export const getCronLogs = asyncHandler(async (req, res) => {
+    // Return logs sorted by most recent first
+    const logs = await CronLog.find().sort({ runDate: -1 });
+
+    res.json({
+        success: true,
+        data: logs
+    });
+});
+
+/**
+ * Delete a specific cron log
+ * @route DELETE /api/products/admin/cron-logs/:id
+ * @access Private/Admin
+ */
+export const deleteCronLog = asyncHandler(async (req, res) => {
+    const log = await CronLog.findById(req.params.id);
+    if (!log) {
+        throw new AppError('Log not found', 404);
+    }
+
+    await CronLog.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Log deleted successfully' });
+});
+
+/**
+ * Trigger manual affiliate sync
+ * @route POST /api/products/admin/trigger-sync
+ * @access Private/Admin
+ */
+export const triggerAffiliateSync = asyncHandler(async (req, res) => {
+    // Wait for the sync to complete so the frontend can show a loading state
+    await syncAffiliateProducts();
+    
+    res.json({ success: true, message: 'Sync process completed.' });
 });
 
 /**

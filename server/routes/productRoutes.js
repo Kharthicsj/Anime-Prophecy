@@ -26,7 +26,10 @@ import {
     getImageExports,
     downloadImageExport,
     deleteImageExport,
-    checkExistingIds
+    checkExistingIds,
+    getCronLogs,
+    deleteCronLog,
+    triggerAffiliateSync
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 import multer from 'multer';
@@ -76,6 +79,27 @@ router.post('/admin/bulk', verifyToken, isAdmin, bulkCreateProducts);
  * @access Private/Admin
  */
 router.post('/admin/check-existing', verifyToken, isAdmin, checkExistingIds);
+
+/**
+ * @route GET /api/products/admin/cron-logs
+ * @desc Get all cron logs (last 30 days)
+ * @access Private/Admin
+ */
+router.get('/admin/cron-logs', verifyToken, isAdmin, getCronLogs);
+
+/**
+ * @route DELETE /api/products/admin/cron-logs/:id
+ * @desc Delete a specific cron log
+ * @access Private/Admin
+ */
+router.delete('/admin/cron-logs/:id', verifyToken, isAdmin, deleteCronLog);
+
+/**
+ * @route POST /api/products/admin/trigger-sync
+ * @desc Manually trigger affiliate price sync
+ * @access Private/Admin
+ */
+router.post('/admin/trigger-sync', verifyToken, isAdmin, triggerAffiliateSync);
 
 /**
  * @route GET /api/products/analytics/stats

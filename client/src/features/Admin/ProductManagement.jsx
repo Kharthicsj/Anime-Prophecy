@@ -30,6 +30,7 @@ import AffiliateBulkModal from "../../components/admin/AffiliateBulkModal";
 import PrivateProductsModal from "../../components/admin/PrivateProductsModal";
 import PinterestExportModal from "../../components/admin/PinterestExportModal";
 import CjAffiliateBulkModal from "../../components/admin/CjAffiliateBulkModal";
+import CronLogsModal from "../../components/admin/CronLogsModal";
 
 import ProductForm from "./ProductForm";
 import ProductList from "./ProductList";
@@ -67,6 +68,7 @@ const ProductManagement = () => {
 	const [showAffiliateModal, setShowAffiliateModal] = useState(false);
 	const [showSocialMediaMenu, setShowSocialMediaMenu] = useState(false);
 	const [selectedAffiliatePlatform, setSelectedAffiliatePlatform] = useState(null);
+	const [showCronLogsModal, setShowCronLogsModal] = useState(false);
 
 	// Pagination & Infinite Scroll states
 	const [currentPage, setCurrentPage] = useState(1);
@@ -1216,6 +1218,20 @@ const ProductManagement = () => {
 					onSelect={(platformId) => {
 						setShowAffiliateModal(false);
 						setSelectedAffiliatePlatform(platformId);
+					}}
+					onOpenCronLogs={() => {
+						setShowAffiliateModal(false);
+						setShowCronLogsModal(true);
+					}}
+				/>
+			)}
+
+			{showCronLogsModal && (
+				<CronLogsModal 
+					onClose={() => setShowCronLogsModal(false)} 
+					onBack={() => {
+						setShowCronLogsModal(false);
+						setShowAffiliateModal(true);
 					}}
 				/>
 			)}

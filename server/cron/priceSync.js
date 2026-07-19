@@ -1,6 +1,8 @@
 import cron from 'node-cron';
 import Product from '../models/Product.js';
 import { getAliExpressProductDetails } from '../utils/aliexpressApi.js';
+import { getCjProductDetails } from '../controllers/cjController.js';
+import CronLog from '../models/CronLog.js';
 
 /**
  * Syncs products from affiliate platforms.
@@ -20,82 +22,101 @@ const syncAffiliateProducts = async () => {
         console.log(`[CRON] Found ${aliExpressProducts.length} AliExpress products to sync.`);
 
         if (aliExpressProducts.length > 0) {
+            let aliExpressLog = new CronLog({ platform: 'AliExpress', events: [] });
             let updatedCount = 0;
             let failedCount = 0;
-            const chunkSize = 50; // AliExpress API limit per request
-
-            // Group products by targetCurrency if needed. For now, assume USD for global sync, 
-            // or dynamically extract if your platform uses mixed currencies. 
-            // We'll use 'USD' as the standard baseline for updates.
+            const chunkSize = 50; 
             const targetCurrency = 'USD';
             const targetLanguage = 'EN';
 
             for (let i = 0; i < aliExpressProducts.length; i += chunkSize) {
                 const chunk = aliExpressProducts.slice(i, i + chunkSize);
                 const chunkIds = chunk.map(p => p.affiliateProductId);
+                let retryCount = 0;
+                let apiRes = null;
+                let chunkError = null;
                 
-                try {
-                    const apiRes = await getAliExpressProductDetails(chunkIds, targetCurrency, targetLanguage);
+                while (retryCount < 3) {
+                    try {
+                        apiRes = await getAliExpressProductDetails(chunkIds, targetCurrency, targetLanguage);
+                        break; // Success
+                    } catch (err) {
+                        if (err.message && err.message.includes('access frequency exceeds the limit')) {
+                            retryCount++;
+                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 3s... (Attempt ${retryCount}/3)`);
+                            await new Promise(res => setTimeout(res, 3000));
+                        } else {
+                            chunkError = err;
+                            break; // Stop retrying for non-rate-limit errors
+                        }
+                    }
+                }
+
+                if (!apiRes) {
+                    console.error(`[CRON] Error syncing chunk ${i}:`, chunkError ? chunkError.message : "Rate limit retries exhausted.");
+                    failedCount += chunk.length;
                     
+                    if (i + chunkSize < aliExpressProducts.length) {
+                        await new Promise(res => setTimeout(res, 5000));
+                    }
+                    continue; // Skip to next chunk
+                }
+
+                try {
                     if (apiRes?.resp_result?.result?.current_record_count > 0) {
                         const fetchedProducts = apiRes.resp_result.result.products.product || [];
-                        
-                        // Create a map for quick lookup
                         const fetchedMap = new Map();
                         fetchedProducts.forEach(fp => {
                             fetchedMap.set(fp.product_id.toString(), fp);
                         });
 
-                        // Compare and update DB
                         for (const dbProduct of chunk) {
                             const updatedData = fetchedMap.get(dbProduct.affiliateProductId);
                             
                             if (updatedData) {
                                 let hasChanges = false;
+                                let changes = [];
                                 
-                                // Price check
                                 const newPrice = Number(updatedData.target_sale_price || updatedData.target_original_price);
                                 if (newPrice > 0 && newPrice !== dbProduct.price) {
+                                    changes.push(`Price: ${dbProduct.price} -> ${newPrice}`);
                                     dbProduct.price = newPrice;
                                     hasChanges = true;
                                 }
 
-                                // Rating check
                                 const evaluateRate = updatedData.evaluate_rate;
                                 const newRating = typeof evaluateRate === 'string' && evaluateRate.includes('%')
                                     ? Math.round((parseFloat(evaluateRate) / 20) * 10) / 10
                                     : Number(evaluateRate) || dbProduct.rating;
                                     
                                 if (newRating !== dbProduct.rating) {
+                                    changes.push(`Rating updated`);
                                     dbProduct.rating = newRating;
                                     hasChanges = true;
                                 }
                                 
-                                // InStock check
                                 if (!dbProduct.inStock) {
+                                    changes.push(`Back in stock`);
                                     dbProduct.inStock = true;
                                     hasChanges = true;
                                 }
 
-                                // Title check
                                 if (updatedData.product_title && updatedData.product_title !== dbProduct.title) {
+                                    changes.push(`Title updated`);
                                     dbProduct.title = updatedData.product_title;
                                     hasChanges = true;
                                 }
 
-                                // Category check
                                 if (updatedData.first_level_category_name && updatedData.first_level_category_name !== dbProduct.category) {
                                     dbProduct.category = updatedData.first_level_category_name;
                                     hasChanges = true;
                                 }
                                 
-                                // SubCategory check
                                 if (updatedData.second_level_category_name && updatedData.second_level_category_name !== dbProduct.subCategory) {
                                     dbProduct.subCategory = updatedData.second_level_category_name;
                                     hasChanges = true;
                                 }
 
-                                // Affiliate Link check (Dynamic promotion link updates)
                                 if (updatedData.promotion_link && updatedData.promotion_link !== dbProduct.affiliateLink) {
                                     dbProduct.affiliateLink = updatedData.promotion_link;
                                     hasChanges = true;
@@ -104,19 +125,29 @@ const syncAffiliateProducts = async () => {
                                 if (hasChanges) {
                                     await dbProduct.save();
                                     updatedCount++;
+                                    aliExpressLog.events.push({
+                                        eventType: 'Updated',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: changes.join(', ')
+                                    });
                                 }
                             } else {
-                                // Product wasn't returned by AliExpress. It might be out of stock or removed.
-                                if (dbProduct.inStock) {
+                                if (dbProduct.inStock || dbProduct.isActive) {
                                     dbProduct.inStock = false;
+                                    dbProduct.isActive = false;
                                     await dbProduct.save();
                                     updatedCount++;
-                                    console.log(`[CRON] Product ${dbProduct.title} marked out of stock (not found on AliExpress).`);
+                                    aliExpressLog.events.push({
+                                        eventType: 'Private',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'Not found on AliExpress, marked private/out-of-stock.'
+                                    });
                                 }
                             }
                         }
                     } else {
-                        console.error(`[CRON] AliExpress chunk ${i} returned no valid products.`);
                         failedCount += chunk.length;
                     }
                 } catch (err) {
@@ -124,20 +155,131 @@ const syncAffiliateProducts = async () => {
                     failedCount += chunk.length;
                 }
 
-                // Wait 2000ms between chunks to respect API rate limits
                 if (i + chunkSize < aliExpressProducts.length) {
+                    await new Promise(res => setTimeout(res, 5000)); // Increased base delay
+                }
+            }
+
+            aliExpressLog.summary = `AliExpress Sync: ${updatedCount} updated, ${failedCount} failed.`;
+            if (failedCount > 0) aliExpressLog.status = 'Partial';
+            await aliExpressLog.save();
+        }
+
+        // 2. CJ Affiliate Sync
+        const cjProducts = await Product.find({ 
+            affiliatePlatform: 'CJ Affiliate',
+            affiliateProductId: { $exists: true, $ne: null },
+            isActive: true 
+        });
+
+        console.log(`[CRON] Found ${cjProducts.length} CJ Affiliate products to sync.`);
+
+        if (cjProducts.length > 0) {
+            let cjLog = new CronLog({ platform: 'CJ Affiliate', events: [] });
+            let updatedCount = 0;
+            let failedCount = 0;
+            const chunkSize = 50; 
+
+            for (let i = 0; i < cjProducts.length; i += chunkSize) {
+                const chunk = cjProducts.slice(i, i + chunkSize);
+                const chunkIds = chunk.map(p => p.affiliateProductId);
+                
+                try {
+                    const fetchedProducts = await getCjProductDetails(chunkIds);
+                    
+                    if (fetchedProducts && fetchedProducts.length > 0) {
+                        const fetchedMap = new Map();
+                        fetchedProducts.forEach(fp => {
+                            fetchedMap.set(fp.affiliateProductId.toString(), fp);
+                        });
+
+                        for (const dbProduct of chunk) {
+                            const updatedData = fetchedMap.get(dbProduct.affiliateProductId);
+                            
+                            if (updatedData) {
+                                let hasChanges = false;
+                                let changes = [];
+                                
+                                if (updatedData.price > 0 && updatedData.price !== dbProduct.price) {
+                                    changes.push(`Price: ${dbProduct.price} -> ${updatedData.price}`);
+                                    dbProduct.price = updatedData.price;
+                                    hasChanges = true;
+                                }
+
+                                if (updatedData.title && updatedData.title !== dbProduct.title) {
+                                    changes.push(`Title updated`);
+                                    dbProduct.title = updatedData.title;
+                                    hasChanges = true;
+                                }
+
+                                if (updatedData.affiliateLink && updatedData.affiliateLink !== dbProduct.affiliateLink) {
+                                    dbProduct.affiliateLink = updatedData.affiliateLink;
+                                    hasChanges = true;
+                                }
+                                
+                                if (!dbProduct.inStock) {
+                                    changes.push(`Back in stock`);
+                                    dbProduct.inStock = true;
+                                    hasChanges = true;
+                                }
+
+                                if (hasChanges) {
+                                    await dbProduct.save();
+                                    updatedCount++;
+                                    cjLog.events.push({
+                                        eventType: 'Updated',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: changes.join(', ')
+                                    });
+                                }
+                            } else {
+                                if (dbProduct.isActive || dbProduct.inStock) {
+                                    dbProduct.isActive = false;
+                                    dbProduct.inStock = false;
+                                    await dbProduct.save();
+                                    updatedCount++;
+                                    cjLog.events.push({
+                                        eventType: 'Private',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'Not found on CJ Affiliate, marked private/out-of-stock.'
+                                    });
+                                }
+                            }
+                        }
+                    } else {
+                        for (const dbProduct of chunk) {
+                            if (dbProduct.isActive || dbProduct.inStock) {
+                                dbProduct.isActive = false;
+                                dbProduct.inStock = false;
+                                await dbProduct.save();
+                                updatedCount++;
+                                cjLog.events.push({
+                                    eventType: 'Private',
+                                    productTitle: dbProduct.title,
+                                    productId: dbProduct._id,
+                                    details: 'CJ returned no products, marked private/out-of-stock.'
+                                });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    failedCount += chunk.length;
+                }
+
+                if (i + chunkSize < cjProducts.length) {
                     await new Promise(res => setTimeout(res, 2000));
                 }
             }
 
-            console.log(`[CRON] AliExpress Sync Complete. Updated: ${updatedCount}, Failed: ${failedCount}`);
+            cjLog.summary = `CJ Affiliate Sync: ${updatedCount} updated, ${failedCount} failed.`;
+            if (failedCount > 0) cjLog.status = 'Partial';
+            await cjLog.save();
         }
 
-        // 2. Placeholder for Amazon Sync
+        // 3. Placeholder for Amazon Sync
         // const amazonProducts = await Product.find({ affiliatePlatform: 'Amazon', isActive: true });
-        // if (amazonProducts.length > 0) {
-        //      syncAmazonProducts(amazonProducts);
-        // }
 
         // 3. Placeholder for Flipkart Sync
         // const flipkartProducts = await Product.find({ affiliatePlatform: 'Flipkart', isActive: true });
@@ -165,4 +307,4 @@ export const initCronJobs = () => {
     console.log("⏱️  Cron Jobs Initialized (Price Sync scheduled for 1:00 AM)");
 };
 
-export const testSync = syncAffiliateProducts;
+export const manualSyncAffiliateProducts = syncAffiliateProducts;
