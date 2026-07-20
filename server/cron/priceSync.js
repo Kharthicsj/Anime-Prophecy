@@ -141,6 +141,13 @@ const syncAffiliateProducts = async () => {
                                         productId: dbProduct._id,
                                         details: changes.join(', ')
                                     });
+                                } else {
+                                    aliExpressLog.events.push({
+                                        eventType: 'Unchanged',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'No changes detected.'
+                                    });
                                 }
                             } else {
                                 if (dbProduct.inStock || dbProduct.isActive) {
@@ -153,6 +160,13 @@ const syncAffiliateProducts = async () => {
                                         productTitle: dbProduct.title,
                                         productId: dbProduct._id,
                                         details: 'Not found on AliExpress, marked private/out-of-stock.'
+                                    });
+                                } else {
+                                    aliExpressLog.events.push({
+                                        eventType: 'Unchanged',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'Remains private/out-of-stock.'
                                     });
                                 }
                             }
@@ -186,7 +200,7 @@ const syncAffiliateProducts = async () => {
                 }
             }
 
-            aliExpressLog.summary = `AliExpress Sync: ${updatedCount} updated, ${failedCount} failed.`;
+            aliExpressLog.summary = `AliExpress Sync: Checked ${aliExpressProducts.length}, ${updatedCount} updated, ${failedCount} failed.`;
             if (failedCount > 0) aliExpressLog.status = 'Partial';
             await aliExpressLog.save();
         }
@@ -258,6 +272,13 @@ const syncAffiliateProducts = async () => {
                                         productId: dbProduct._id,
                                         details: changes.join(', ')
                                     });
+                                } else {
+                                    cjLog.events.push({
+                                        eventType: 'Unchanged',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'No changes detected.'
+                                    });
                                 }
                             } else {
                                 if (dbProduct.isActive || dbProduct.inStock) {
@@ -270,6 +291,13 @@ const syncAffiliateProducts = async () => {
                                         productTitle: dbProduct.title,
                                         productId: dbProduct._id,
                                         details: 'Not found on CJ Affiliate, marked private/out-of-stock.'
+                                    });
+                                } else {
+                                    cjLog.events.push({
+                                        eventType: 'Unchanged',
+                                        productTitle: dbProduct.title,
+                                        productId: dbProduct._id,
+                                        details: 'Remains private/out-of-stock.'
                                     });
                                 }
                             }
@@ -299,7 +327,7 @@ const syncAffiliateProducts = async () => {
                 }
             }
 
-            cjLog.summary = `CJ Affiliate Sync: ${updatedCount} updated, ${failedCount} failed.`;
+            cjLog.summary = `CJ Affiliate Sync: Checked ${cjProducts.length}, ${updatedCount} updated, ${failedCount} failed.`;
             if (failedCount > 0) cjLog.status = 'Partial';
             await cjLog.save();
         }

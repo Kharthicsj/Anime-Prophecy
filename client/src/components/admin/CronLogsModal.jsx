@@ -182,6 +182,7 @@ const CronLogsModal = ({ onClose, onBack }) => {
                                     >
                                         <option value="All">All Events</option>
                                         <option value="Updated">Updated</option>
+                                        <option value="Unchanged">Unchanged</option>
                                         <option value="Private">Made Private</option>
                                         <option value="Failed">Failed</option>
                                     </select>
@@ -196,6 +197,7 @@ const CronLogsModal = ({ onClose, onBack }) => {
                                                         event.eventType === 'Updated' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' : 
                                                         event.eventType === 'Private' ? 'bg-amber-900/30 text-amber-400 border border-amber-900' : 
                                                         event.eventType === 'Failed' ? 'bg-red-900/30 text-red-500 border border-red-900' :
+                                                        event.eventType === 'Unchanged' ? 'bg-slate-900/40 text-slate-400 border border-slate-800' :
                                                         'bg-zinc-800 text-zinc-400 border border-zinc-700'
                                                     }`}>
                                                         {event.eventType}
