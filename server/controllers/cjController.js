@@ -105,7 +105,7 @@ export const fetchCjProductsByKeyword = asyncHandler(async (req, res) => {
 
     const query = `
         query SearchProducts($companyId: ID!, $propertyId: ID!, $keywords: [String!], $currency: String) {
-            shoppingProducts(companyId: $companyId, keywords: $keywords, currency: $currency) {
+            shoppingProducts(companyId: $companyId, keywords: $keywords, currency: $currency, partnerStatus: JOINED) {
                 resultList {
                     id
                     title

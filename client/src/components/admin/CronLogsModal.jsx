@@ -183,6 +183,7 @@ const CronLogsModal = ({ onClose, onBack }) => {
                                         <option value="All">All Events</option>
                                         <option value="Updated">Updated</option>
                                         <option value="Private">Made Private</option>
+                                        <option value="Failed">Failed</option>
                                     </select>
                                 </div>
 
@@ -191,7 +192,12 @@ const CronLogsModal = ({ onClose, onBack }) => {
                                         {selectedLog.events.filter(e => eventFilter === 'All' || e.eventType === eventFilter).map((event, idx) => (
                                             <div key={idx} className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50 flex flex-col gap-2">
                                                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-bold ${event.eventType === 'Updated' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' : event.eventType === 'Private' ? 'bg-amber-900/30 text-amber-400 border border-amber-900' : 'bg-red-900/30 text-red-400 border border-red-900'}`}>
+                                                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-bold ${
+                                                        event.eventType === 'Updated' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' : 
+                                                        event.eventType === 'Private' ? 'bg-amber-900/30 text-amber-400 border border-amber-900' : 
+                                                        event.eventType === 'Failed' ? 'bg-red-900/30 text-red-500 border border-red-900' :
+                                                        'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                                    }`}>
                                                         {event.eventType}
                                                     </span>
                                                     <span className="text-zinc-300 font-sans font-semibold text-sm flex-1 flex items-center gap-2 min-w-0">

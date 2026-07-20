@@ -10,13 +10,13 @@ import CronLog from '../models/CronLog.js';
  */
 const syncAffiliateProducts = async () => {
     console.log(`\n[CRON] Starting affiliate price sync at ${new Date().toLocaleString()}`);
-    
+
     try {
         // 1. Fetch all active AliExpress products that have a valid affiliateProductId
-        const aliExpressProducts = await Product.find({ 
+        const aliExpressProducts = await Product.find({
             affiliatePlatform: 'AliExpress',
             affiliateProductId: { $exists: true, $ne: null },
-            isActive: true 
+            isActive: true
         });
 
         console.log(`[CRON] Found ${aliExpressProducts.length} AliExpress products to sync.`);
@@ -25,7 +25,7 @@ const syncAffiliateProducts = async () => {
             let aliExpressLog = new CronLog({ platform: 'AliExpress', events: [] });
             let updatedCount = 0;
             let failedCount = 0;
-            const chunkSize = 50; 
+            const chunkSize = 50;
             const targetCurrency = 'USD';
             const targetLanguage = 'EN';
 
@@ -35,7 +35,7 @@ const syncAffiliateProducts = async () => {
                 let retryCount = 0;
                 let apiRes = null;
                 let chunkError = null;
-                
+
                 while (retryCount < 3) {
                     try {
                         apiRes = await getAliExpressProductDetails(chunkIds, targetCurrency, targetLanguage);
@@ -43,21 +43,31 @@ const syncAffiliateProducts = async () => {
                     } catch (err) {
                         if (err.message && err.message.includes('access frequency exceeds the limit')) {
                             retryCount++;
-                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 3s... (Attempt ${retryCount}/3)`);
-                            await new Promise(res => setTimeout(res, 3000));
+                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 5s... (Attempt ${retryCount}/3)`);
+                            await new Promise(res => setTimeout(res, 5000));
                         } else {
                             chunkError = err;
-                            break; // Stop retrying for non-rate-limit errors
+                            break;
                         }
                     }
                 }
 
                 if (!apiRes) {
-                    console.error(`[CRON] Error syncing chunk ${i}:`, chunkError ? chunkError.message : "Rate limit retries exhausted.");
+                    const errorMsg = chunkError ? chunkError.message : "Rate limit retries exhausted.";
+                    console.error(`[CRON] Error syncing chunk ${i}:`, errorMsg);
                     failedCount += chunk.length;
-                    
+
+                    chunk.forEach(dbProduct => {
+                        aliExpressLog.events.push({
+                            eventType: 'Failed',
+                            productTitle: dbProduct.title,
+                            productId: dbProduct._id,
+                            details: `API Error: ${errorMsg}`
+                        });
+                    });
+
                     if (i + chunkSize < aliExpressProducts.length) {
-                        await new Promise(res => setTimeout(res, 5000));
+                        await new Promise(res => setTimeout(res, 10000));
                     }
                     continue; // Skip to next chunk
                 }
@@ -72,11 +82,11 @@ const syncAffiliateProducts = async () => {
 
                         for (const dbProduct of chunk) {
                             const updatedData = fetchedMap.get(dbProduct.affiliateProductId);
-                            
+
                             if (updatedData) {
                                 let hasChanges = false;
                                 let changes = [];
-                                
+
                                 const newPrice = Number(updatedData.target_sale_price || updatedData.target_original_price);
                                 if (newPrice > 0 && newPrice !== dbProduct.price) {
                                     changes.push(`Price: ${dbProduct.price} -> ${newPrice}`);
@@ -88,13 +98,13 @@ const syncAffiliateProducts = async () => {
                                 const newRating = typeof evaluateRate === 'string' && evaluateRate.includes('%')
                                     ? Math.round((parseFloat(evaluateRate) / 20) * 10) / 10
                                     : Number(evaluateRate) || dbProduct.rating;
-                                    
+
                                 if (newRating !== dbProduct.rating) {
                                     changes.push(`Rating updated`);
                                     dbProduct.rating = newRating;
                                     hasChanges = true;
                                 }
-                                
+
                                 if (!dbProduct.inStock) {
                                     changes.push(`Back in stock`);
                                     dbProduct.inStock = true;
@@ -111,7 +121,7 @@ const syncAffiliateProducts = async () => {
                                     dbProduct.category = updatedData.first_level_category_name;
                                     hasChanges = true;
                                 }
-                                
+
                                 if (updatedData.second_level_category_name && updatedData.second_level_category_name !== dbProduct.subCategory) {
                                     dbProduct.subCategory = updatedData.second_level_category_name;
                                     hasChanges = true;
@@ -149,14 +159,30 @@ const syncAffiliateProducts = async () => {
                         }
                     } else {
                         failedCount += chunk.length;
+                        chunk.forEach(dbProduct => {
+                            aliExpressLog.events.push({
+                                eventType: 'Failed',
+                                productTitle: dbProduct.title,
+                                productId: dbProduct._id,
+                                details: `No data returned from AliExpress API.`
+                            });
+                        });
                     }
                 } catch (err) {
                     console.error(`[CRON] Error syncing chunk ${i}:`, err.message);
                     failedCount += chunk.length;
+                    chunk.forEach(dbProduct => {
+                        aliExpressLog.events.push({
+                            eventType: 'Failed',
+                            productTitle: dbProduct.title,
+                            productId: dbProduct._id,
+                            details: `Processing Error: ${err.message}`
+                        });
+                    });
                 }
 
                 if (i + chunkSize < aliExpressProducts.length) {
-                    await new Promise(res => setTimeout(res, 5000)); // Increased base delay
+                    await new Promise(res => setTimeout(res, 10000)); // Increased base delay for large volumes
                 }
             }
 
@@ -166,10 +192,10 @@ const syncAffiliateProducts = async () => {
         }
 
         // 2. CJ Affiliate Sync
-        const cjProducts = await Product.find({ 
+        const cjProducts = await Product.find({
             affiliatePlatform: 'CJ Affiliate',
             affiliateProductId: { $exists: true, $ne: null },
-            isActive: true 
+            isActive: true
         });
 
         console.log(`[CRON] Found ${cjProducts.length} CJ Affiliate products to sync.`);
@@ -178,15 +204,15 @@ const syncAffiliateProducts = async () => {
             let cjLog = new CronLog({ platform: 'CJ Affiliate', events: [] });
             let updatedCount = 0;
             let failedCount = 0;
-            const chunkSize = 50; 
+            const chunkSize = 50;
 
             for (let i = 0; i < cjProducts.length; i += chunkSize) {
                 const chunk = cjProducts.slice(i, i + chunkSize);
                 const chunkIds = chunk.map(p => p.affiliateProductId);
-                
+
                 try {
                     const fetchedProducts = await getCjProductDetails(chunkIds);
-                    
+
                     if (fetchedProducts && fetchedProducts.length > 0) {
                         const fetchedMap = new Map();
                         fetchedProducts.forEach(fp => {
@@ -195,11 +221,11 @@ const syncAffiliateProducts = async () => {
 
                         for (const dbProduct of chunk) {
                             const updatedData = fetchedMap.get(dbProduct.affiliateProductId);
-                            
+
                             if (updatedData) {
                                 let hasChanges = false;
                                 let changes = [];
-                                
+
                                 if (updatedData.price > 0 && updatedData.price !== dbProduct.price) {
                                     changes.push(`Price: ${dbProduct.price} -> ${updatedData.price}`);
                                     dbProduct.price = updatedData.price;
@@ -216,7 +242,7 @@ const syncAffiliateProducts = async () => {
                                     dbProduct.affiliateLink = updatedData.affiliateLink;
                                     hasChanges = true;
                                 }
-                                
+
                                 if (!dbProduct.inStock) {
                                     changes.push(`Back in stock`);
                                     dbProduct.inStock = true;
@@ -303,7 +329,7 @@ export const initCronJobs = () => {
         scheduled: true,
         timezone: "Asia/Singapore" // Matches the SG API timezone or can be customized
     });
-    
+
     console.log("⏱️  Cron Jobs Initialized (Price Sync scheduled for 1:00 AM)");
 };
 
