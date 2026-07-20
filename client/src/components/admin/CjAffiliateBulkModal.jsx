@@ -14,6 +14,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 	// Form States
 	const [keywords, setKeywords] = useState("");
 	const [targetCurrency, setTargetCurrency] = useState("");
+	const [availability, setAvailability] = useState("IN_STOCK");
 
 	const [productIdsInput, setProductIdsInput] = useState("");
 	const [csvFile, setCsvFile] = useState(null);
@@ -129,7 +130,8 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 			if (activeTab === "search") {
 				res = await apiClient.post("/products/admin/cj/search", {
 					keywords,
-					targetCurrency
+					targetCurrency,
+					availability: availability === "Both" ? "" : availability
 				});
 			} else if (activeTab === "ids") {
 				res = await apiClient.post("/products/admin/cj/fetch-ids", {
@@ -279,25 +281,40 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 						<div className="px-5 py-4 bg-zinc-900 space-y-4">
 							{activeTab === "search" && (
 								<div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 w-full">
-									<div className="flex flex-col gap-1.5 flex-1 w-full">
+									<div className="flex flex-col gap-1.5 flex-1 w-full min-w-[200px]">
 										<label className="text-xs font-semibold text-zinc-400">Search Keywords</label>
 										<Input
 											placeholder="e.g. Demon Slayer Figures"
 											value={keywords}
 											onChange={(e) => setKeywords(e.target.value)}
 											onKeyDown={(e) => { if (e.key === 'Enter') handleFetch(); }}
+											className="!bg-zinc-800 !border-zinc-700 text-sm h-[42px]"
 										/>
 									</div>
-									<div className="flex flex-col gap-1.5 w-full sm:w-[220px] shrink-0">
+									<div className="flex flex-col gap-1.5 w-full sm:w-[150px] shrink-0">
+										<label className="text-xs font-semibold text-zinc-400">Stock Status</label>
+										<select 
+											value={availability}
+											onChange={(e) => setAvailability(e.target.value)}
+											className="w-full bg-zinc-800 border border-zinc-700 text-white text-sm py-2.5 px-3 h-[42px] rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors cursor-pointer"
+										>
+											<option value="IN_STOCK">In Stock</option>
+											<option value="OUT_OF_STOCK">Out of Stock</option>
+											<option value="Both">Both Types</option>
+										</select>
+									</div>
+									<div className="flex flex-col gap-1.5 w-full sm:w-[180px] shrink-0">
 										<label className="text-xs font-semibold text-zinc-400">Fetch by Currency</label>
-										<CurrencySearchableSelect
-											name="targetCurrency"
-											value={targetCurrency}
-											onChange={(e) => setTargetCurrency(e.target.value)}
-											currencies={CURRENCY_LIST}
-										/>
+										<div className="h-[42px] [&>div>div]:h-[42px]">
+											<CurrencySearchableSelect
+												name="targetCurrency"
+												value={targetCurrency}
+												onChange={(e) => setTargetCurrency(e.target.value)}
+												currencies={CURRENCY_LIST}
+											/>
+										</div>
 									</div>
-									<Button onClick={handleFetch} disabled={isLoading || isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-[180px] shrink-0 text-sm py-2 h-[42px] mt-1">
+									<Button onClick={handleFetch} disabled={isLoading || isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-[140px] shrink-0 text-sm h-[42px] !p-0 flex items-center justify-center">
 										{isLoading ? "Fetching..." : "Fetch Products"}
 									</Button>
 								</div>

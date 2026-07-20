@@ -1,14 +1,16 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const CJ_GRAPHQL_URL = 'https://ads.api.cj.com/query';
 
-const fetchSchema = async () => {
+/**
+ * Helper to fetch the CJ Affiliate GraphQL schema documentation for a specific node type.
+ * Usage: fetchCjSchema('ShoppingProductsQuery').then(console.log)
+ */
+export const fetchCjSchema = async (nodeName = "Query") => {
     try {
         const query = `
             query {
-              __type(name: "Query") {
+              __type(name: "${nodeName}") {
                 fields {
                   name
                   args {
@@ -36,10 +38,9 @@ const fetchSchema = async () => {
                 }
             }
         );
-        const shoppingProducts = response.data.data.__type.fields.find(f => f.name === 'shoppingProducts');
-        console.log(JSON.stringify(shoppingProducts.args, null, 2));
+        return response.data.data.__type.fields;
     } catch (err) {
-        console.error(err.message);
+        console.error("CJ Schema Fetch Error:", err.message);
+        return null;
     }
-}
-fetchSchema();
+};

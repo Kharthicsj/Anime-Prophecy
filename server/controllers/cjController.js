@@ -104,8 +104,8 @@ export const fetchCjProductsByKeyword = asyncHandler(async (req, res) => {
     if (!keywords) throw new AppError('Keywords are required', 400);
 
     const query = `
-        query SearchProducts($companyId: ID!, $propertyId: ID!, $keywords: [String!], $currency: String) {
-            shoppingProducts(companyId: $companyId, keywords: $keywords, currency: $currency, partnerStatus: JOINED) {
+        query SearchProducts($companyId: ID!, $propertyId: ID!, $keywords: [String!], $currency: String, $availability: Availability) {
+            shoppingProducts(companyId: $companyId, keywords: $keywords, currency: $currency, partnerStatus: JOINED, availability: $availability) {
                 resultList {
                     id
                     title
@@ -129,6 +129,11 @@ export const fetchCjProductsByKeyword = asyncHandler(async (req, res) => {
         keywords: [keywords]
     };
     if (targetCurrency) variables.currency = targetCurrency;
+    
+    // Check if availability is explicitly "IN_STOCK" or "OUT_OF_STOCK". If "Both" (empty/null), we omit it.
+    if (req.body.availability && ['IN_STOCK', 'OUT_OF_STOCK'].includes(req.body.availability)) {
+        variables.availability = req.body.availability;
+    }
 
     const cjProducts = await fetchCjProductsByQuery(query, variables);
     const normalizedProducts = cjProducts.map(p => mapCjProduct(p, propertyId));
