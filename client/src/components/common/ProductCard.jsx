@@ -94,42 +94,48 @@ const ProductCard = ({ product, showCountryTag = false, className = "", override
 					}}
 				/>
 
-				{/* Badges Container */}
-				<div className="absolute top-3 left-3 flex flex-col items-start gap-2">
-					<span 
-						style={getThemeStyle(animeTheme, '#9333ea', '#ffffff')}
-						className="text-xs font-bold px-3 py-1 rounded-full shadow-md"
-					>
-						{product.animeTag}
-					</span>
-					{showCountryTag && product.countries && (
-						<div className="flex flex-wrap gap-1.5">
-							{product.countries
-								.filter((c) => c.toLowerCase() !== "other" && c.toLowerCase() !== "worldwide")
-								.map((c, idx) => {
-									const countryTheme = (overrideTheme?.tagType === 'country' && overrideTheme?.tag === c) ? overrideTheme : getTheme('country', c);
-									return (
-										<span
-											key={idx}
-											style={getThemeStyle(countryTheme, 'rgba(24,24,27,0.9)', '#d4d4d8', '#3f3f46')}
-											className="text-[0.65rem] font-bold px-2 py-0.5 rounded backdrop-blur-sm shadow-md tracking-wider uppercase"
-										>
-											{c}
-										</span>
-									);
-								})}
-						</div>
-					)}
-				</div>
+				{/* Badges Container (Top Row) */}
+				<div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 pointer-events-none">
+					{/* Left Side: Anime & Countries */}
+					<div className="flex flex-col items-start gap-2 min-w-0 flex-1">
+						<span 
+							style={getThemeStyle(animeTheme, '#9333ea', '#ffffff')}
+							className="text-[0.7rem] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full shadow-md truncate max-w-full pointer-events-auto"
+							title={product.animeTag}
+						>
+							{product.animeTag}
+						</span>
+						{showCountryTag && product.countries && (
+							<div className="flex flex-wrap gap-1.5 pointer-events-auto">
+								{product.countries
+									.filter((c) => c.toLowerCase() !== "other" && c.toLowerCase() !== "worldwide")
+									.map((c, idx) => {
+										const countryTheme = (overrideTheme?.tagType === 'country' && overrideTheme?.tag === c) ? overrideTheme : getTheme('country', c);
+										return (
+											<span
+												key={idx}
+												style={getThemeStyle(countryTheme, 'rgba(24,24,27,0.9)', '#d4d4d8', '#3f3f46')}
+												className="text-[0.6rem] sm:text-[0.65rem] font-bold px-2 py-0.5 rounded backdrop-blur-sm shadow-md tracking-wider uppercase truncate max-w-[80px] sm:max-w-[100px]"
+												title={c}
+											>
+												{c}
+											</span>
+										);
+									})}
+							</div>
+						)}
+					</div>
 
-				{/* Store Badge */}
-				<div className="absolute top-3 right-3">
-					<span 
-						style={getThemeStyle(storeTheme, '#18181b', '#facc15', '#3f3f46')}
-						className="text-xs font-bold px-3 py-1 rounded-full"
-					>
-						{product.store}
-					</span>
+					{/* Right Side: Store Badge */}
+					<div className="flex-shrink-0 max-w-[45%] flex justify-end pointer-events-auto">
+						<span 
+							style={getThemeStyle(storeTheme, '#18181b', '#facc15', '#3f3f46')}
+							className="text-[0.7rem] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full truncate shadow-md"
+							title={product.store}
+						>
+							{product.store}
+						</span>
+					</div>
 				</div>
 			</div>
 

@@ -15,8 +15,7 @@ const syncAffiliateProducts = async () => {
         // 1. Fetch all active AliExpress products that have a valid affiliateProductId
         const aliExpressProducts = await Product.find({
             affiliatePlatform: 'AliExpress',
-            affiliateProductId: { $exists: true, $ne: null },
-            isActive: true
+            affiliateProductId: { $exists: true, $ne: null }
         });
 
         console.log(`[CRON] Found ${aliExpressProducts.length} AliExpress products to sync.`);
@@ -105,9 +104,10 @@ const syncAffiliateProducts = async () => {
                                     hasChanges = true;
                                 }
 
-                                if (!dbProduct.inStock) {
-                                    changes.push(`Back in stock`);
+                                if (!dbProduct.inStock || !dbProduct.isActive) {
+                                    changes.push(`Back in stock / Reactivated`);
                                     dbProduct.inStock = true;
+                                    dbProduct.isActive = true;
                                     hasChanges = true;
                                 }
 
@@ -194,8 +194,7 @@ const syncAffiliateProducts = async () => {
         // 2. CJ Affiliate Sync
         const cjProducts = await Product.find({
             affiliatePlatform: 'CJ Affiliate',
-            affiliateProductId: { $exists: true, $ne: null },
-            isActive: true
+            affiliateProductId: { $exists: true, $ne: null }
         });
 
         console.log(`[CRON] Found ${cjProducts.length} CJ Affiliate products to sync.`);
@@ -243,9 +242,10 @@ const syncAffiliateProducts = async () => {
                                     hasChanges = true;
                                 }
 
-                                if (!dbProduct.inStock) {
-                                    changes.push(`Back in stock`);
+                                if (!dbProduct.inStock || !dbProduct.isActive) {
+                                    changes.push(`Back in stock / Reactivated`);
                                     dbProduct.inStock = true;
+                                    dbProduct.isActive = true;
                                     hasChanges = true;
                                 }
 

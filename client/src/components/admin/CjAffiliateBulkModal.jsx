@@ -8,7 +8,7 @@ import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { SearchableDropdown } from "../common/FilterPanel";
 
-const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
+const CjAffiliateBulkModal = ({ onClose, onUploadSuccess, formAnimeOptions = [], formCategoryOptions = [], dynamicSubCategories = [] }) => {
 	const [activeTab, setActiveTab] = useState("search"); // 'search', 'ids', 'csv'
 
 	// Form States
@@ -30,6 +30,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 
 	// Data States
 	const [products, setProducts] = useState([]);
+	const [hasSearched, setHasSearched] = useState(false);
 	const [selectedProductIds, setSelectedProductIds] = useState(new Set());
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -46,8 +47,8 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 	const [localFilterAddedState, setLocalFilterAddedState] = useState("all");
 	const [isClassifyModalOpen, setIsClassifyModalOpen] = useState(false);
 
-	const formAnimeOptions = Array.from(new Set([...ANIME_OPTIONS, "Other"]));
-	const formCategoryOptions = Array.from(new Set([...CATEGORY_OPTIONS, "Other"]));
+	const resolvedAnimeOptions = formAnimeOptions.length > 0 ? formAnimeOptions : Array.from(new Set([...ANIME_OPTIONS, "Other"]));
+	const resolvedCategoryOptions = formCategoryOptions.length > 0 ? formCategoryOptions : Array.from(new Set([...CATEGORY_OPTIONS, "Other"]));
 
 	const toggleSelection = (idx) => {
 		const product = products[idx];
@@ -147,6 +148,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 				}
 
 				setProducts(fetched);
+				setHasSearched(true);
 				setDisplayLimit(100);
 
 				let existingSet = new Set();
@@ -209,7 +211,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 			animeTag: finalAnimeTag,
 			category: finalCategory,
 			subCategory: finalSubCategory,
-			countries: defaultCountries,
+			countries: defaultCountries.map(c => (c === "USA" || c === "United States" || c === "Unites States") ? "US" : c),
 			images: (p.images && p.images.length > 0) ? p.images : ["https://via.placeholder.com/400x400?text=No+Image"],
 			affiliateLink: p.affiliateLink,
 			description: p.description || p.title || "CJ Affiliate Product",
@@ -241,6 +243,16 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 					<div className="p-5 flex justify-between items-center">
 						<div>
 							<h2 className="text-xl font-bold text-white flex items-center gap-2">
+								{(products.length > 0 || hasSearched) && (
+									<button onClick={() => {
+										setProducts([]);
+										setHasSearched(false);
+									}} className="mr-1 text-zinc-400 hover:text-white transition-colors" title="Back to Search">
+										<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+										</svg>
+									</button>
+								)}
 								<FiLink className="text-green-500 text-2xl" /> CJ Affiliate Integration
 							</h2>
 							<p className="text-sm text-zinc-400 mt-1">
@@ -347,8 +359,14 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 					{products.length === 0 ? (
 						<div className="text-center text-zinc-500 py-12 text-sm flex flex-col items-center">
 							<FiSearch className="text-4xl mb-4 opacity-50" />
-							{activeTab === "search" && "Enter keywords and fetch to see CJ products."}
-							{activeTab === "ids" && "Enter unique CJ Product IDs or SKUs and fetch."}
+							{hasSearched ? (
+								<div className="text-red-400">No products found from the API for your search. Try different keywords or options.</div>
+							) : (
+								<>
+									{activeTab === "search" && "Enter keywords and fetch to see CJ products."}
+									{activeTab === "ids" && "Enter unique CJ Product IDs or SKUs and fetch."}
+								</>
+							)}
 						</div>
 					) : (
 						<div className="flex flex-col items-center w-full pb-8">
@@ -588,7 +606,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 									name="defaultAnimeTag"
 									value={defaultAnimeTag}
 									onChange={(e) => setDefaultAnimeTag(e.target.value)}
-									options={formAnimeOptions}
+									options={resolvedAnimeOptions}
 									placeholder="Select Anime"
 								/>
 								{defaultAnimeTag === "Other" && (
@@ -605,7 +623,7 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 										setDefaultCategory(e.target.value);
 										setDefaultSubCategory("");
 									}}
-									options={formCategoryOptions}
+									options={resolvedCategoryOptions}
 									placeholder="Select Category"
 								/>
 								{defaultCategory === "Other" && (
@@ -613,14 +631,14 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess }) => {
 								)}
 							</div>
 
-							{(SUB_CATEGORY_MAP[defaultCategory]?.length > 0 || defaultCategory === "Other") && (
+							{(SUB_CATEGORY_MAP[defaultCategory]?.length > 0 || defaultCategory === "Other" || dynamicSubCategories.length > 0) && (
 								<div className="flex flex-col gap-1.5">
 									<label className="text-xs font-semibold text-zinc-400">SubCategory</label>
 									<SearchableSelect
 										name="defaultSubCategory"
 										value={defaultSubCategory}
 										onChange={(e) => setDefaultSubCategory(e.target.value)}
-										options={Array.from(new Set([...(SUB_CATEGORY_MAP[defaultCategory] || []), "Other"]))}
+										options={Array.from(new Set([...(SUB_CATEGORY_MAP[defaultCategory] || []), ...dynamicSubCategories, "Other"]))}
 										placeholder="Select SubCategory"
 										upwards={true}
 									/>

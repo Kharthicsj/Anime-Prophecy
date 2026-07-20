@@ -118,6 +118,7 @@ const ProductManagement = () => {
 		animeTags: [],
 		categories: [],
 		stores: [],
+		subCategories: [],
 		countries: [],
 	});
 
@@ -130,6 +131,7 @@ const ProductManagement = () => {
 					animeTags: d.animeTags || [],
 					categories: d.categories || [],
 					stores: d.stores || [],
+					subCategories: d.subCategories || [],
 					countries: d.countries || [],
 				});
 			} catch {
@@ -1245,6 +1247,9 @@ const ProductManagement = () => {
 						setHasMore(true);
 						fetchProducts(1, true);
 					}}
+					formAnimeOptions={formAnimeOptions}
+					formCategoryOptions={formCategoryOptions}
+					dynamicSubCategories={dynamicOptions.subCategories}
 				/>
 			)}
 			{selectedAffiliatePlatform && selectedAffiliatePlatform !== 'cj' && (
@@ -1259,6 +1264,7 @@ const ProductManagement = () => {
 					}}
 					formAnimeOptions={formAnimeOptions}
 					formCategoryOptions={formCategoryOptions}
+					dynamicSubCategories={dynamicOptions.subCategories}
 				/>
 			)}
 		</div>
