@@ -44,7 +44,7 @@ const syncAffiliateProducts = async () => {
             let aliExpressLog = new CronLog({ platform: 'AliExpress', events: [] });
             let updatedCount = 0;
             let failedCount = 0;
-            const chunkSize = 20; // Reduced from 50 to 20 to avoid rate limits
+            const chunkSize = 50; // Reverted back to 50 for faster processing
             const targetCurrency = 'USD';
             const targetLanguage = 'EN';
 
@@ -62,8 +62,8 @@ const syncAffiliateProducts = async () => {
                     } catch (err) {
                         if (err.message && (err.message.includes('limit') || err.message.includes('frequency') || err.message.includes('second'))) {
                             retryCount++;
-                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 30s... (Attempt ${retryCount}/3)`);
-                            await new Promise(res => setTimeout(res, 30000));
+                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 10s... (Attempt ${retryCount}/3)`);
+                            await new Promise(res => setTimeout(res, 10000));
                         } else {
                             chunkError = err;
                             break;
@@ -86,7 +86,7 @@ const syncAffiliateProducts = async () => {
                     });
 
                     if (i + chunkSize < aliExpressProducts.length) {
-                        await new Promise(res => setTimeout(res, 20000)); // 20 second delay to avoid bans
+                        await new Promise(res => setTimeout(res, 10000));
                     }
                     syncProgress.current += chunk.length;
                     continue; // Skip to next chunk
@@ -209,7 +209,7 @@ const syncAffiliateProducts = async () => {
                 }
 
                 if (i + chunkSize < aliExpressProducts.length) {
-                    await new Promise(res => setTimeout(res, 20000)); // 20 second base delay for large volumes
+                    await new Promise(res => setTimeout(res, 10000)); // 10s base delay
                 }
                 syncProgress.current += chunk.length;
             }
