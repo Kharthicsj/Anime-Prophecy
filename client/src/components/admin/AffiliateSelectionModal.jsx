@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FiLink, FiX, FiTerminal, FiRefreshCw } from "react-icons/fi";
 import { SiAliexpress, SiFlipkart } from "react-icons/si";
 import { FaAmazon } from "react-icons/fa";
@@ -6,6 +6,58 @@ import apiClient from "../../services/apiClient";
 
 const AffiliateSelectionModal = ({ onClose, onSelect, onOpenCronLogs }) => {
 	const [isSyncing, setIsSyncing] = useState(false);
+	const [syncProgress, setSyncProgress] = useState(null);
+
+	useEffect(() => {
+		let interval;
+		const checkStatus = async () => {
+			try {
+				const res = await apiClient.get('/products/admin/sync-status');
+				if (res.data?.success) {
+					setIsSyncing(res.data.data.isSyncing);
+					setSyncProgress(res.data.data.progress);
+				}
+			} catch (err) {
+				// silently ignore polling errors
+			}
+		};
+
+		if (isSyncing) {
+			// If we are syncing, poll every 10 seconds
+			interval = setInterval(checkStatus, 10000);
+		} else {
+			// Just check once on mount (or when sync finishes)
+			checkStatus();
+		}
+
+		return () => {
+			if (interval) clearInterval(interval);
+		};
+	}, [isSyncing]);
+
+	const handleTriggerSync = () => {
+		if (isSyncing) {
+			alert('Sync is already in progress...');
+			return;
+		}
+
+		setIsSyncing(true);
+		apiClient.post('/products/admin/trigger-sync')
+			.then(res => {
+				alert(res.data.message || 'Sync completed successfully!');
+				setIsSyncing(false);
+				setSyncProgress(null);
+			})
+			.catch(err => {
+				if (err.response?.status === 400) {
+					alert('Sync is already in progress...');
+				} else {
+					alert('Failed to trigger sync.');
+					setIsSyncing(false);
+				}
+			});
+	};
+
 	const platforms = [
 		{ id: 'aliexpress', name: 'AliExpress', icon: <SiAliexpress />, color: 'orange-500', bg: 'hover:border-orange-500', desc: 'Fetch products using AliExpress API', warning: 'Requires VPN connection to avoid API timeouts.' },
 		{ id: 'cj', name: 'CJ Affiliate', icon: <FiLink />, color: 'green-500', bg: 'hover:border-green-500', desc: 'Fetch bulk products securely via CJ API.' },
@@ -24,32 +76,24 @@ const AffiliateSelectionModal = ({ onClose, onSelect, onOpenCronLogs }) => {
 						<p className="text-sm text-zinc-400 mt-1">Select the affiliate platform you want to import from.</p>
 					</div>
 					<div className="flex items-center gap-3">
-						<button 
-							onClick={async () => {
-								if (isSyncing) return;
-								try {
-									setIsSyncing(true);
-									const res = await apiClient.post('/products/admin/trigger-sync');
-									alert(res.data.message || 'Sync completed successfully!');
-								} catch (err) {
-									alert('Failed to trigger sync.');
-								} finally {
-									setIsSyncing(false);
-								}
-							}}
+						<button
+							onClick={handleTriggerSync}
 							disabled={isSyncing}
-							className={`whitespace-nowrap cursor-pointer text-xs font-semibold ${isSyncing ? 'text-zinc-500 bg-zinc-800' : 'text-zinc-300 bg-blue-900/30 hover:bg-blue-900/50 border-blue-900'} px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-2`}
+							className={`whitespace-nowrap cursor-pointer text-xs font-semibold ${isSyncing ? 'text-zinc-400 bg-zinc-800 border-zinc-700' : 'text-zinc-300 bg-blue-900/30 hover:bg-blue-900/50 border-blue-900'} px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-2`}
 						>
-							<FiRefreshCw className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Syncing...' : 'Force Sync'}
+							<FiRefreshCw className={isSyncing ? 'animate-spin text-purple-400' : ''} />
+							{isSyncing
+								? (syncProgress?.total > 0 ? `Syncing ${syncProgress.platform} (${Math.round((syncProgress.current / syncProgress.total) * 100)}%)` : 'Syncing...')
+								: 'Force Sync'}
 						</button>
-						<button 
-							onClick={() => { onClose(); if (onOpenCronLogs) onOpenCronLogs(); }} 
+						<button
+							onClick={() => { onClose(); if (onOpenCronLogs) onOpenCronLogs(); }}
 							className="whitespace-nowrap cursor-pointer text-xs font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg border border-zinc-700 transition-colors flex items-center gap-2"
 						>
 							<FiTerminal /> View Sync Logs
 						</button>
 						<button onClick={onClose} className="cursor-pointer text-zinc-400 hover:text-white p-2 flex items-center justify-center">
-						<FiX className="w-5 h-5" />
+							<FiX className="w-5 h-5" />
 
 						</button>
 					</div>

@@ -951,9 +951,30 @@ export const deleteCronLog = asyncHandler(async (req, res) => {
  */
 export const triggerAffiliateSync = asyncHandler(async (req, res) => {
     // Wait for the sync to complete so the frontend can show a loading state
-    await syncAffiliateProducts();
+    const result = await syncAffiliateProducts();
+    
+    if (result && result.skipped) {
+        res.status(400);
+        throw new Error('Sync is already in progress.');
+    }
     
     res.json({ success: true, message: 'Sync process completed.' });
+});
+
+/**
+ * Get current sync progress status
+ * @route GET /api/products/admin/sync-status
+ * @access Private/Admin
+ */
+import { getIsSyncing, getSyncProgressData } from '../cron/priceSync.js';
+export const getSyncStatus = asyncHandler(async (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            isSyncing: getIsSyncing(),
+            progress: getSyncProgressData()
+        }
+    });
 });
 
 /**

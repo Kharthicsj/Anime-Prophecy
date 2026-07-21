@@ -9,13 +9,22 @@ import CronLog from '../models/CronLog.js';
  * Currently supports AliExpress. Amazon and Flipkart can be added here later.
  */
 let isSyncing = false;
+export const syncProgress = {
+    total: 0,
+    current: 0,
+    platform: ''
+};
 
 const syncAffiliateProducts = async () => {
     if (isSyncing) {
         console.log(`[CRON] Sync already in progress, skipping...`);
-        return;
+        return { skipped: true };
     }
     isSyncing = true;
+    syncProgress.total = 0;
+    syncProgress.current = 0;
+    syncProgress.platform = '';
+    
     console.log(`\n[CRON] Starting affiliate price sync at ${new Date().toLocaleString()}`);
 
     try {
@@ -24,6 +33,10 @@ const syncAffiliateProducts = async () => {
             affiliatePlatform: 'AliExpress',
             affiliateProductId: { $exists: true, $ne: null }
         });
+
+        syncProgress.platform = 'AliExpress';
+        syncProgress.total = aliExpressProducts.length;
+        syncProgress.current = 0;
 
         console.log(`[CRON] Found ${aliExpressProducts.length} AliExpress products to sync.`);
 
@@ -47,10 +60,10 @@ const syncAffiliateProducts = async () => {
                         apiRes = await getAliExpressProductDetails(chunkIds, targetCurrency, targetLanguage);
                         break; // Success
                     } catch (err) {
-                        if (err.message && err.message.includes('access frequency exceeds the limit')) {
+                        if (err.message && (err.message.includes('limit') || err.message.includes('frequency') || err.message.includes('second'))) {
                             retryCount++;
-                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 5s... (Attempt ${retryCount}/3)`);
-                            await new Promise(res => setTimeout(res, 5000));
+                            console.log(`[CRON] AliExpress rate limited on chunk ${i}. Retrying in 10s... (Attempt ${retryCount}/3)`);
+                            await new Promise(res => setTimeout(res, 10000));
                         } else {
                             chunkError = err;
                             break;
@@ -73,8 +86,9 @@ const syncAffiliateProducts = async () => {
                     });
 
                     if (i + chunkSize < aliExpressProducts.length) {
-                        await new Promise(res => setTimeout(res, 10000));
+                        await new Promise(res => setTimeout(res, 15000)); // 15 second delay to avoid bans
                     }
+                    syncProgress.current += chunk.length;
                     continue; // Skip to next chunk
                 }
 
@@ -203,8 +217,9 @@ const syncAffiliateProducts = async () => {
                 }
 
                 if (i + chunkSize < aliExpressProducts.length) {
-                    await new Promise(res => setTimeout(res, 10000)); // Increased base delay for large volumes
+                    await new Promise(res => setTimeout(res, 15000)); // 15 second base delay for large volumes
                 }
+                syncProgress.current += chunk.length;
             }
 
             aliExpressLog.summary = `AliExpress Sync: Checked ${aliExpressProducts.length}, ${updatedCount} updated, ${failedCount} failed.`;
@@ -217,6 +232,10 @@ const syncAffiliateProducts = async () => {
             affiliatePlatform: 'CJ Affiliate',
             affiliateProductId: { $exists: true, $ne: null }
         });
+
+        syncProgress.platform = 'CJ Affiliate';
+        syncProgress.total = cjProducts.length;
+        syncProgress.current = 0;
 
         console.log(`[CRON] Found ${cjProducts.length} CJ Affiliate products to sync.`);
 
@@ -332,6 +351,7 @@ const syncAffiliateProducts = async () => {
                 if (i + chunkSize < cjProducts.length) {
                     await new Promise(res => setTimeout(res, 2000));
                 }
+                syncProgress.current += chunk.length;
             }
 
             cjLog.summary = `CJ Affiliate Sync: Checked ${cjProducts.length}, ${updatedCount} updated, ${failedCount} failed.`;
@@ -350,9 +370,14 @@ const syncAffiliateProducts = async () => {
 
     } catch (error) {
         console.error(`[CRON] Critical Error during Affiliate Sync:`, error);
+        return { error: true };
     } finally {
         isSyncing = false;
+        syncProgress.total = 0;
+        syncProgress.current = 0;
     }
+    
+    return { success: true };
 };
 
 /**
@@ -393,3 +418,5 @@ export const initCronJobs = () => {
 };
 
 export const manualSyncAffiliateProducts = syncAffiliateProducts;
+export const getIsSyncing = () => isSyncing;
+export const getSyncProgressData = () => syncProgress;

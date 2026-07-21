@@ -29,7 +29,8 @@ import {
     checkExistingIds,
     getCronLogs,
     deleteCronLog,
-    triggerAffiliateSync
+    triggerAffiliateSync,
+    getSyncStatus
 } from '../controllers/productController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 import multer from 'multer';
@@ -100,6 +101,13 @@ router.delete('/admin/cron-logs/:id', verifyToken, isAdmin, deleteCronLog);
  * @access Private/Admin
  */
 router.post('/admin/trigger-sync', verifyToken, isAdmin, triggerAffiliateSync);
+
+/**
+ * @route GET /api/products/admin/sync-status
+ * @desc Get current sync progress status
+ * @access Private/Admin
+ */
+router.get('/admin/sync-status', verifyToken, isAdmin, getSyncStatus);
 
 /**
  * @route GET /api/products/analytics/stats
