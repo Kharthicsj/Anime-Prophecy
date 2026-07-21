@@ -172,6 +172,48 @@ const CronLogsModal = ({ onClose, onBack }) => {
                                         <div className="font-bold text-zinc-300">{selectedLog.events?.length || 0}</div>
                                     </div>
                                 </div>
+                                
+                                {(() => {
+                                    const events = selectedLog.events || [];
+                                    const reactivatedCount = events.filter(e => e.eventType === 'Updated' && e.details?.includes('Reactivated')).length;
+                                    const privateCount = events.filter(e => e.eventType === 'Private').length;
+                                    const updatedCount = events.filter(e => e.eventType === 'Updated' && !e.details?.includes('Reactivated')).length;
+                                    const unchangedCount = events.filter(e => e.eventType === 'Unchanged').length;
+                                    const failedCount = events.filter(e => e.eventType === 'Failed').length;
+
+                                    return (
+                                        <div className="bg-zinc-900/50 p-4 rounded-lg border border-zinc-800 mb-6">
+                                            <h4 className="text-zinc-400 font-bold mb-3 border-b border-zinc-800 pb-2">Sync Metrics Breakdown</h4>
+                                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                                <div className="bg-zinc-950 p-2 rounded border border-zinc-800/50 text-center flex flex-col justify-center">
+                                                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Unchanged</div>
+                                                    <div className="text-xl font-bold text-slate-400">{unchangedCount}</div>
+                                                </div>
+                                                <div className="bg-zinc-950 p-2 rounded border border-blue-900/30 text-center flex flex-col justify-center">
+                                                    <div className="text-[10px] text-blue-500 uppercase tracking-wider mb-1">Data Updated</div>
+                                                    <div className="text-xl font-bold text-blue-400">{updatedCount}</div>
+                                                </div>
+                                                <div className="bg-zinc-950 p-2 rounded border border-green-900/30 text-center flex flex-col justify-center">
+                                                    <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">Reactivated</div>
+                                                    <div className="text-xl font-bold text-green-400">{reactivatedCount}</div>
+                                                </div>
+                                                <div className="bg-zinc-950 p-2 rounded border border-amber-900/30 text-center flex flex-col justify-center">
+                                                    <div className="text-[10px] text-amber-500 uppercase tracking-wider mb-1">Made Private</div>
+                                                    <div className="text-xl font-bold text-amber-400">{privateCount}</div>
+                                                </div>
+                                                <div className="bg-zinc-950 p-2 rounded border border-red-900/30 text-center flex flex-col justify-center">
+                                                    <div className="text-[10px] text-red-500 uppercase tracking-wider mb-1">Failed</div>
+                                                    <div className="text-xl font-bold text-red-400">{failedCount}</div>
+                                                </div>
+                                            </div>
+                                            {selectedLog.summary && (
+                                                <div className="mt-3 pt-2 border-t border-zinc-800/50 text-[10px] text-zinc-600 font-mono text-center">
+                                                    RAW OUTPUT: {selectedLog.summary}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 <div className="flex justify-between items-center border-b border-zinc-800 pb-2 mb-3">
                                     <h4 className="text-zinc-400 font-bold">Event Trace</h4>

@@ -20,13 +20,19 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess, formAnimeOptions = [],
 	const [csvFile, setCsvFile] = useState(null);
 
 	// Classification States
-	const [defaultAnimeTag, setDefaultAnimeTag] = useState("Other");
+	const [rememberChoices, setRememberChoices] = useState(() => {
+		return localStorage.getItem('cj_affiliate_remember_choices') === 'true';
+	});
+	const [defaultAnimeTag, setDefaultAnimeTag] = useState(() => localStorage.getItem('cj_affiliate_anime') || "Other");
 	const [customAnimeTag, setCustomAnimeTag] = useState("");
-	const [defaultCategory, setDefaultCategory] = useState("Other");
+	const [defaultCategory, setDefaultCategory] = useState(() => localStorage.getItem('cj_affiliate_category') || "Other");
 	const [customCategory, setCustomCategory] = useState("");
-	const [defaultSubCategory, setDefaultSubCategory] = useState("Other");
+	const [defaultSubCategory, setDefaultSubCategory] = useState(() => localStorage.getItem('cj_affiliate_subcategory') || "Other");
 	const [customSubCategory, setCustomSubCategory] = useState("");
-	const [defaultCountries, setDefaultCountries] = useState(["Worldwide"]);
+	const [defaultCountries, setDefaultCountries] = useState(() => {
+		const saved = localStorage.getItem('cj_affiliate_countries');
+		return saved ? JSON.parse(saved) : ["Worldwide"];
+	});
 
 	// Data States
 	const [products, setProducts] = useState([]);
@@ -222,6 +228,21 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess, formAnimeOptions = [],
 
 		try {
 			const res = await apiClient.post("/products/admin/bulk", { products: productsToSave });
+			
+			if (rememberChoices) {
+				localStorage.setItem('cj_affiliate_remember_choices', 'true');
+				localStorage.setItem('cj_affiliate_anime', finalAnimeTag);
+				localStorage.setItem('cj_affiliate_category', finalCategory);
+				localStorage.setItem('cj_affiliate_subcategory', finalSubCategory);
+				localStorage.setItem('cj_affiliate_countries', JSON.stringify(defaultCountries));
+			} else {
+				localStorage.setItem('cj_affiliate_remember_choices', 'false');
+				localStorage.removeItem('cj_affiliate_anime');
+				localStorage.removeItem('cj_affiliate_category');
+				localStorage.removeItem('cj_affiliate_subcategory');
+				localStorage.removeItem('cj_affiliate_countries');
+			}
+
 			setImportResult({
 				count: res.data.data.count || 0,
 				skippedCount: res.data.data.skippedCount || 0,
@@ -662,9 +683,22 @@ const CjAffiliateBulkModal = ({ onClose, onUploadSuccess, formAnimeOptions = [],
 							</div>
 						</div>
 
+						<div className="flex items-center gap-2 mt-5 bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">
+							<input
+								type="checkbox"
+								id="rememberChoices"
+								checked={rememberChoices}
+								onChange={(e) => setRememberChoices(e.target.checked)}
+								className="w-4 h-4 rounded border-zinc-600 text-purple-600 focus:ring-purple-500 bg-zinc-900 cursor-pointer"
+							/>
+							<label htmlFor="rememberChoices" className="text-sm text-zinc-300 cursor-pointer select-none">
+								Remember my choices
+							</label>
+						</div>
+
 						{error && <div className="text-red-400 bg-red-900/20 border border-red-800/50 p-3 rounded-lg text-sm mt-5">{error}</div>}
 
-						<div className="flex gap-3 justify-end mt-8">
+						<div className="flex gap-3 justify-end mt-6">
 							<Button onClick={() => setIsClassifyModalOpen(false)} variant="secondary" className="px-5">
 								Go Back
 							</Button>

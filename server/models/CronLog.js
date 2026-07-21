@@ -6,7 +6,7 @@ const cronLogSchema = new mongoose.Schema({
     status: { type: String, enum: ['Success', 'Failed', 'Partial', 'Running'], default: 'Success' },
     summary: { type: String },
     events: [{
-        eventType: { type: String, enum: ['Updated', 'Private', 'Error'] },
+        eventType: { type: String, enum: ['Updated', 'Private', 'Failed', 'Error', 'Unchanged'] },
         productTitle: String,
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         details: String

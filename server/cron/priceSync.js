@@ -8,7 +8,14 @@ import CronLog from '../models/CronLog.js';
  * Syncs products from affiliate platforms.
  * Currently supports AliExpress. Amazon and Flipkart can be added here later.
  */
+let isSyncing = false;
+
 const syncAffiliateProducts = async () => {
+    if (isSyncing) {
+        console.log(`[CRON] Sync already in progress, skipping...`);
+        return;
+    }
+    isSyncing = true;
     console.log(`\n[CRON] Starting affiliate price sync at ${new Date().toLocaleString()}`);
 
     try {
@@ -343,6 +350,8 @@ const syncAffiliateProducts = async () => {
 
     } catch (error) {
         console.error(`[CRON] Critical Error during Affiliate Sync:`, error);
+    } finally {
+        isSyncing = false;
     }
 };
 
@@ -358,7 +367,29 @@ export const initCronJobs = () => {
         timezone: "Asia/Singapore" // Matches the SG API timezone or can be customized
     });
 
-    console.log("⏱️  Cron Jobs Initialized (Price Sync scheduled for 1:00 AM)");
+    console.log("⏱️  Cron Jobs Initialized (Price Sync scheduled for 1:00 AM SG Time)");
+
+    // Catch-up logic: Run on startup if the last run was missed
+    setTimeout(async () => {
+        try {
+            const lastLog = await CronLog.findOne().sort({ runDate: -1 });
+            if (!lastLog) {
+                console.log("[CRON] No previous logs found. Running initial sync...");
+                syncAffiliateProducts();
+                return;
+            }
+
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+            if (Date.now() - new Date(lastLog.runDate).getTime() > ONE_DAY) {
+                console.log("[CRON] Last sync was over 24 hours ago. Running catch-up sync...");
+                syncAffiliateProducts();
+            } else {
+                console.log("[CRON] Sync is up to date (ran within the last 24 hours).");
+            }
+        } catch (error) {
+            console.error("[CRON] Failed to check last log on startup:", error);
+        }
+    }, 10000); // Check 10 seconds after server startup
 };
 
 export const manualSyncAffiliateProducts = syncAffiliateProducts;
